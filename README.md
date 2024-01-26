@@ -8,3 +8,9 @@ Reference tutorials and learning content are obtained from [here](https://github
 - Edit: VScode
 - Langage: C and AT&T Assembly Language
 
+**Directory**
+
+|                                           |                              |
+| ----------------------------------------- | ---------------------------- |
+| [View](1.workspace/read.md)               |Preparing the development environment|
+| View                                      | Writing a kernel and outputting 'Hello, Kernel World.|
