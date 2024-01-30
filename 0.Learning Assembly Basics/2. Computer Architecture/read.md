@@ -20,8 +20,8 @@
 **Components involved in CPU execution include**
 |                              |                |
 |------------------------------|----------------|
-|`Program Counter`             |The Program Counter is used to inform the computer from where to fetch the next instruction. It holds the memory address of the next instruction to be executed. The CPU checks the Program Counter first, fetches the data stored at the specified address, and then passes it to the Instruction Decoder.  |
-|`Instruction Decoder`         |                |
+|`Program Counter`             |The Program Counter is used to inform the computer from where to fetch the next instruction. It holds the memory address of the next instruction to be executed. The CPU checks the Program Counter first, fetches the data stored at the specified address, and then passes it to the Instruction Decoder.                                          |
+|`Instruction Decoder`         |The Instruction Decoder is responsible for interpreting instructions, including operations like addition, subtraction, multiplication, data movement, and interactions with memory units involved in the process. It typically consists of actual instructions and a list of memory units needed for executing those instructions.                |
 |`Data Bus`                    |                |
 |`General Registers`           |                |
 |`Arithmetic Logic Unit (ALU)` |                |
