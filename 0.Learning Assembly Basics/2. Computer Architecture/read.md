@@ -72,3 +72,57 @@ Customer Name Pointer (1 word) -> Name Record Start
 Customer Address Pointer (1 word) -> Address Record Start + 4 bytes  
 Customer Age (1 word) -> Age Record Start + 8 bytes  
 Customer ID (1 word) -> ID Record Start + 12 bytes  
+
+Addressing Modes
+
+1. Immediate Addressing Mode:  
+   **Description:** The instruction directly includes the data to be accessed.  
+   **Example:** Initializing a register to 0, the instruction directly includes the number 0.  
+
+2. Register Addressing Mode:  
+   **Description:** The instruction includes the register to be accessed rather than a memory location.  
+   **Example:** Operating on the value in a register rather than data in memory.  
+
+3. Direct Addressing Mode:  
+   **Description:** The instruction includes the memory address to be accessed.  
+   **Example:** Loading data at address 2002 into a register.  
+
+4. Indexed Addressing Mode:  
+   **Description:** The instruction includes the memory address and an index register, which stores the offset for that address.  
+   **Example:** If the index register contains the number 4, the actual accessed address will be 2002 + 4 = 2006.  
+
+5. Indirect Addressing Mode:  
+   **Description:** The instruction includes a register storing a pointer to the data to be accessed.  
+   **Example:** Using the indirect addressing mode, the value 4 in the %eax register indicates using the value at memory location 4.  
+
+6. Based Addressing Mode:  
+   **Description:** Similar to indirect addressing but requires an additional value called an offset, which is added to the value in the base register for addressing.  
+   **Example:** Considering the memory structure storing customer information. If we want to access a customer's age (the eighth byte in the record), and the register holds the starting memory address of this  customer's information, we can use the based addressing mode:  
+
+   - Use the base register as the base pointer.
+   - Set the offset to 8.
+   - The instruction will use the value in the base register plus the offset to obtain the actual memory address and then retrieve the data at that address, i.e., the customer's age."
+
+### Concept of Scale Factor:
+
+In computer architecture, the scale factor refers to the stride in accessing elements in an array or data structure using the indexed addressing mode. In x86 processor instructions, scale factors are typically values like 2, 4, 8, and so on.
+
+Consider an example where we have an array, and each element occupies 4 bytes. If we want to access this array using the indexed addressing mode, we need to set the scale factor to 4 to correctly access each element.
+
+Let's assume the base address is 2000, and the value in the index register is 3. Using a scale factor of 4, the formula for calculating the actual address is:
+
+Actual Address = Base Address + (Index Register Value × Scale Factor)
+
+Substituting the values:
+
+Actual Address = 2000 + (3 × 4) = 2012
+
+This means that by using the indexed addressing mode with a scale factor of 4, accessing the position of the fourth element starting from address 2000 results in an actual address of 2012.
+
+In this context, the scale factor specifies the spacing between adjacent elements in the array. It allows programmers to conveniently access different positions in the array using the indexed addressing mode.
+
+Simple explanation for accessing a group of numbers where each byte is 1, requiring a move of 3, but when accessing a 4-byte word, it represents a change from 1 to 4, hence 3x4.
+
+In indexed addressing mode, the scale factor is used to specify the stride in accessing elements in an array or data structure. If each element occupies 1 byte, and you want to access a word (4 bytes) in the array, you need to set the scale factor to 4.
+
+In essence, the scale factor tells the computer how many bytes to skip when accessing elements in an array or data structure. In your example, multiplying 3 by 4 indicates that you want a stride of 4 bytes for each access. Therefore, the computer will skip 12 bytes to access the next 4-byte element, ensuring that you access different positions in the array correctly on byte boundaries.
