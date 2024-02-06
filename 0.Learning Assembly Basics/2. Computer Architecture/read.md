@@ -78,31 +78,39 @@ Addressing Modes
 1. Immediate Addressing Mode:  
    **Description:** The instruction directly includes the data to be accessed.  
    **Example:** Initializing a register to 0, the instruction directly includes the number 0.  
+   **Program** `movl $0, %eax`
 
-2. Register Addressing Mode:  
+3. Register Addressing Mode:  
    **Description:** The instruction includes the register to be accessed rather than a memory location.  
    **Example:** Operating on the value in a register rather than data in memory.  
+   **Program** `movl %eax, %ebx`
 
-3. Direct Addressing Mode:  
+5. Direct Addressing Mode:  
    **Description:** The instruction includes the memory address to be accessed.  
    **Example:** Loading data at address 2002 into a register.  
+   **Program** `movl 0, %eax`
 
-4. Indexed Addressing Mode:  
+7. Indexed Addressing Mode:  
    **Description:** The instruction includes the memory address and an index register, which stores the offset for that address.  
    **Example:** If the index register contains the number 4, the actual accessed address will be 2002 + 4 = 2006.  
+   **Program** `movl string_data(, %ecx, 1), %eax`
 
-5. Indirect Addressing Mode:  
+9. Indirect Addressing Mode:  
    **Description:** The instruction includes a register storing a pointer to the data to be accessed.  
    **Example:** Using the indirect addressing mode, the value 4 in the %eax register indicates using the value at memory location 4.  
+   **Program** `movl (%eax), %ebx`
 
-6. Based Addressing Mode:  
+11. Based Addressing Mode:  
    **Description:** Similar to indirect addressing but requires an additional value called an offset, which is added to the value in the base register for addressing.  
-   **Example:** Considering the memory structure storing customer information. If we want to access a customer's age (the eighth byte in the record), and the register holds the starting memory address of this  customer's information, we can use the based addressing mode:  
+   **Example:** Considering the memory structure storing customer information. If we want to access a customer's age (the eighth byte in the record), and the register holds the starting memory address of this  customer's information.  
+   **Program** `movl 4(%eax), %ebx`
+    
+   we can use the based addressing mode:  
 
    - Use the base register as the base pointer.
    - Set the offset to 8.
-   - The instruction will use the value in the base register plus the offset to obtain the actual memory address and then retrieve the data at that address, i.e., the customer's age."
-
+   - The instruction will use the value in the base register plus the offset to obtain the actual memory address and then retrieve the data at that address, i.e., the customer's age.  
+     
 ### Concept of Scale Factor:
 
 In computer architecture, the scale factor refers to the stride in accessing elements in an array or data structure using the indexed addressing mode. In x86 processor instructions, scale factors are typically values like 2, 4, 8, and so on.
