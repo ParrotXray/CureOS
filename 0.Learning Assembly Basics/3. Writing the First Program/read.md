@@ -26,9 +26,9 @@ _start:
 
 - Compile
 ```sh=
-gcc -c exit.S
+i686-elf-gcc -c exit.S
 
-ld exit.o -o exit
+ld exit.o -m elf_i386 -o exit
 
 ./exit
 
@@ -37,6 +37,13 @@ echo $?
 ```sh=
 output: 0
 ```
+-gdb debug
+```sh=
+i686-elf-gcc -c -g exit.S
+gdb ./exit.S
+run
+```
+
 ### x86 general-purpose registers
 
 | Register | Description                                                                                                                   |
