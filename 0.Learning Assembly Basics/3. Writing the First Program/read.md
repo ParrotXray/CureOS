@@ -37,10 +37,12 @@ echo $?
 ```sh=
 output: 0
 ```
--gdb debug
+- gdb debug
 ```sh=
 i686-elf-gcc -c -g exit.S
+
 gdb ./exit.S
+
 run
 ```
 
