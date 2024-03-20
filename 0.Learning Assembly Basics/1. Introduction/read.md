@@ -25,6 +25,8 @@ The kernel is the core of computer operation but cannot function independently; 
 Assembly language requires working directly with the machine and is closer to hardware compared to high-level languages.
 High-level languages make programming easier, where one high-level language command usually corresponds to several assembly language commands.
 
+<!-- https://stackoverflow.com/questions/48323666/running-32-bit-app-on-64-bit-ubuntu-with-ld-library-path -->
+<!-- https://stackoverflow.com/questions/13178501/compiling-32-bit-assembler-on-64-bit-ubuntu -->
 ### How to compile a program
 - install the library
 ```sh=
@@ -32,9 +34,6 @@ sudo apt install binutils
 sudo apt update
 sudo apt install lib32z1
 dpkg -L libc6-i386 | grep -w ld 
-/lib32/ld-2.31.so
-/lib/ld-linux.so.2
-/lib32/ld-linux.so.2
 sudo apt install libc6-dev-i386
 ```
 - compile
@@ -42,4 +41,5 @@ sudo apt install libc6-dev-i386
 i686-elf-gcc -c -g f2c.S -lmylib -no-pie
 ld -melf_i386 -e _start -dynamic-linker /lib32/ld-linux.so.2 -o my_program my_program.o -lc
 ./my_program
+echo $?
 ```
