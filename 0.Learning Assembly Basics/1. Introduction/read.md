@@ -38,8 +38,8 @@ sudo apt install libc6-dev-i386
 ```
 - compile
 ```sh=
-i686-elf-gcc -c -g f2c.S -lmylib -no-pie
-ld -melf_i386 -e _start -dynamic-linker /lib32/ld-linux.so.2 -o my_program my_program.o -lc
+i686-elf-gcc -c -g my_program.S
+ld -melf_i386 my_program.o -o f2c -lc -I /lib32/ld-linux.so.2
 ./my_program
 echo $?
 ```
