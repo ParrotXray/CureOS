@@ -24,14 +24,20 @@ _start:
     int $0x80  # Trigger a software interrupt, enter the kernel to execute the corresponding system call, complete the program's exit
 ```
 
-- Compile
+### How to compile a program
+- install the library
 ```sh=
-i686-elf-gcc -c exit.S
-
-ld exit.o -m elf_i386 -o exit
-
-./exit
-
+sudo apt install binutils
+sudo apt update
+sudo apt install lib32z1
+dpkg -L libc6-i386 | grep -w ld 
+sudo apt install libc6-dev-i386
+```
+- compile
+```sh=
+i686-elf-gcc -c -g my_program.S
+ld -melf_i386 my_program.o -o f2c -lc -I /lib32/ld-linux.so.2
+./my_program
 echo $?
 ```
 ```sh=
