@@ -27,19 +27,4 @@ High-level languages make programming easier, where one high-level language comm
 
 <!-- https://stackoverflow.com/questions/48323666/running-32-bit-app-on-64-bit-ubuntu-with-ld-library-path -->
 <!-- https://stackoverflow.com/questions/13178501/compiling-32-bit-assembler-on-64-bit-ubuntu -->
-### How to compile a program
-- install the library
-```sh=
-sudo apt install binutils
-sudo apt update
-sudo apt install lib32z1
-dpkg -L libc6-i386 | grep -w ld 
-sudo apt install libc6-dev-i386
-```
-- compile
-```sh=
-i686-elf-gcc -c -g my_program.S
-ld -melf_i386 my_program.o -o f2c -lc -I /lib32/ld-linux.so.2
-./my_program
-echo $?
-```
+
