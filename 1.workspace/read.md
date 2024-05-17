@@ -29,7 +29,7 @@ This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 ```
 ### Compiling Bochs
-Download the [source code](https://sourceforge.net/projects/bochs/files/latest/download), extract it, and place the [bochs-build.sh](bochs-build.sh) script in the folder. Then, execute the script in the current folder.
+Download the [source code](https://sourceforge.net/projects/bochs/files/bochs/2.8/), extract it, and place the [bochs-build.sh](bochs-build.sh) script in the folder. Then, execute the script in the current folder.
 ```sh=
 sudo apt install libx11-dev xserver-xorg-dev xorg-dev -y
 sudo apt install libsdl2-dev -y
