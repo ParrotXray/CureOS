@@ -37,6 +37,7 @@ sudo apt install libsdl2-dev -y
 sudo apt install libncurses5-dev -y
 sudo apt install xorriso -y
 sudo apt install mtools -y
+sudo apt install qemu-system-i386 -y
 bash ./bochs-build.sh
 ```
 **Test the command**
