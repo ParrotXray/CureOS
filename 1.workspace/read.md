@@ -35,6 +35,8 @@ Download the [source code](https://sourceforge.net/projects/bochs/files/bochs/2.
 sudo apt install libx11-dev xserver-xorg-dev xorg-dev -y
 sudo apt install libsdl2-dev -y
 sudo apt install libncurses5-dev
+sudo apt install xorriso -y
+sudo apt install mtools -y
 bash ./bochs-build.sh
 ```
 **Test the command**
