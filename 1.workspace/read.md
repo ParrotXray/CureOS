@@ -7,13 +7,14 @@
 ### Compiling i686-elf-gcc
 Open the terminal and execute the [gcc-build.sh](gcc-build.sh) script; this may take about half an hour.
 ```sh=
-./gcc-build.sh
+bash ./gcc-build.sh
 ```
 **Permanently add the newly compiled GCC to the PATH environment variable**
 
 Permanently add the newly compiled GCC to the PATH environment variable. The configuration file depends on the shell you are using, such as `${HOME}/.zshrc` for zsh or `${HOME}/.bashrc` for bash. Alternatively, you can directly modify the global `/etc/profile` file (though it's not recommended). Afterward, reboot your system.
 ```sh=
 vim ~/.bashrc
+source ~/.bashrc
 ```
 Add `export PATH="$HOME/cross-compiler/bin:$PATH"`
 
@@ -33,7 +34,8 @@ Download the [source code](https://sourceforge.net/projects/bochs/files/bochs/2.
 ```sh=
 sudo apt install libx11-dev xserver-xorg-dev xorg-dev -y
 sudo apt install libsdl2-dev -y
-./bochs-build.sh
+sudo apt install libncurses5-dev
+bash ./bochs-build.sh
 ```
 **Test the command**
 ```sh=
