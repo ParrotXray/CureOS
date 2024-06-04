@@ -12,6 +12,6 @@ Reference tutorials and learning content are obtained from [here](https://github
 
 | Chapter                                        |  Comments                                                             |
 | ---------------------------------------------- | ----------------------------------------------------------------------|
-| [View](0.Learning Assembly Basics/)            |  Learning Assembly Basics                                             |
+| [View](0.Learning%20Assembly%20Basics/)            |  Learning Assembly Basics                                             |
 | [View](1.workspace/read.md)                    |  Preparing the development environment                                |
 | [View](2.asm-and-multiboot&hello-kernel-world/)|  Writing a kernel and outputting 'Hello, Kernel World                 |
