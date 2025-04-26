@@ -1,0 +1,9 @@
+#ifndef _LUNAIX_KEYBOARD_H
+#define _LUNAIX_KEYBOARD_H
+
+/**
+ * @brief 初始化鍵盤控制器和中斷處理
+ */
+void keyboard_init();
+
+#endif /* _LUNAIX_KEYBOARD_H */

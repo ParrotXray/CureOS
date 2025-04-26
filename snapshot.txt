@@ -1,0 +1,25 @@
+½lock 7: addr=0xc053908c, size=3944, USED
+ERROR: Block 4 at 0xc0538034 is outside heap range
+[HEAP] Found 2 errors in heap integrity!iguous with next block at 0xc053804c
+[HEAP] Free memory after freeing: 0 bytes
+[MEMPOOL] Testing memory pool
+[MEMPOOL] Initial stats: total=100, free=100, usage=0%
+[MEMPOOL] Block 0 content: Block 0100, free=50, usage=50%
+[MEMPOOL] Block 2 content: Block 2
+[MEMPOOL] Block 4 content: Block 4
+[MEMPOOL] Pool expanded successfully100, free=75, usage=25%
+[MEMPOOL] Final stats: total=150, free=150, usage=0%e=16%
+[MEMPOOL] Memory pool destroyed
+[HEAP] Allocated 1000 small blocks, memory used: -1 bytes
+[HEAP] Memory overhead: 0 bytes, recovered: -1 bytes
+Total allocations: 0stics ===
+Current allocations: 0
+Total allocated bytes: 0
+Peak allocated bytes: 0: 4218860
+Total heap size: 4218860
+Heap utilization: 100%
+=== Memory Leak Report =======
+No memory leaks detected.
+[KERNEL] Memory management tests completed successfully
+Double Fault Exception (#DF) at EIP: 0x8, Error Code: 0xc01092e6
+

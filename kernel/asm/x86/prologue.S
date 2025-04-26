@@ -67,3 +67,9 @@
     j_:
         hlt
         jmp j_
+
+    # # 修改這裡：使用sti而不是cli
+    # j_:
+    #     sti    # 啟用中斷
+    #     hlt    # 等待中斷
+    #     jmp j_

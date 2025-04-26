@@ -105,7 +105,7 @@ void* vmm_alloc_page(void* vpn, pt_attr dattr, pt_attr tattr) {
 void vmm_unmap_page(void* vpn) {
     // 1. 防止解除映射核心關鍵區域 (0xC0000000以上的空間)
     if ((uintptr_t)vpn >= 0xC0000000) {
-        printf("[VMM-UNMAP-DEBUG] Skipping kernel space page at %p\n", vpn);
+        // printf("[VMM-UNMAP-DEBUG] Skipping kernel space page at %p\n", vpn);
         return;
     }
     
@@ -113,12 +113,12 @@ void vmm_unmap_page(void* vpn) {
     // 防止解除映射可能正在使用的I/O映射或其他特殊頁面
     // 例如VGA緩衝區，BIOS數據區等
     if ((uintptr_t)vpn < 0x1000) {  // 第一頁通常包含重要的IDT等
-        printf("[VMM-UNMAP-DEBUG] Skipping critical first page at %p\n", vpn);
+        // printf("[VMM-UNMAP-DEBUG] Skipping critical first page at %p\n", vpn);
         return;
     }
     
     if ((uintptr_t)vpn >= 0xA0000 && (uintptr_t)vpn < 0x100000) {  // VGA和BIOS區域
-        printf("[VMM-UNMAP-DEBUG] Skipping VGA/BIOS area at %p\n", vpn);
+        // printf("[VMM-UNMAP-DEBUG] Skipping VGA/BIOS area at %p\n", vpn);
         return;
     }
     
@@ -131,7 +131,7 @@ void vmm_unmap_page(void* vpn) {
     
     // 4. 進行完整性和有效性檢查
     if (!pde) {
-        printf("[VMM-UNMAP-DEBUG] Page directory entry not present for %p\n", vpn);
+        // printf("[VMM-UNMAP-DEBUG] Page directory entry not present for %p\n", vpn);
         return;  // 頁目錄項不存在，無需進一步操作
     }
     
@@ -140,7 +140,7 @@ void vmm_unmap_page(void* vpn) {
     uint32_t pte = pt[pt_offset];
     
     if (!(pte & 1)) {  // 檢查頁面是否存在 (P位)
-        printf("[VMM-UNMAP-DEBUG] Page not present at %p\n", vpn);
+        // printf("[VMM-UNMAP-DEBUG] Page not present at %p\n", vpn);
         return;  // 頁表項不存在或不是有效映射
     }
     
@@ -153,8 +153,8 @@ void vmm_unmap_page(void* vpn) {
     // 7. 釋放頁面並刷新TLB
     if (IS_CACHED(pte)) {
         // 記錄即將釋放的頁面
-        printf("[VMM-UNMAP-DEBUG] Freeing physical page %p mapped at virtual address %p\n", 
-               (void*)physical_addr, vpn);
+        // printf("[VMM-UNMAP-DEBUG] Freeing physical page %p mapped at virtual address %p\n", 
+        //        (void*)physical_addr, vpn);
                
         if (pmm_free_page(pte)) {
             // 僅在物理頁面成功釋放後才刷新TLB
@@ -165,14 +165,14 @@ void vmm_unmap_page(void* vpn) {
             
             // 8. 清除頁表項
             pt[pt_offset] = 0;
-            printf("[VMM-UNMAP-DEBUG] Successfully unmapped page at %p\n", vpn);
+            // printf("[VMM-UNMAP-DEBUG] Successfully unmapped page at %p\n", vpn);
         } else {
             printf("[VMM-UNMAP-ERROR] Failed to free physical page for %p\n", vpn);
         }
     } else {
         // 未緩存頁面，直接清除頁表項
         pt[pt_offset] = 0;
-        printf("[VMM-UNMAP-DEBUG] Unmapped uncached page at %p\n", vpn);
+        // printf("[VMM-UNMAP-DEBUG] Unmapped uncached page at %p\n", vpn);
     }
 }
 

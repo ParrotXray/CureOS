@@ -10,6 +10,13 @@
 #include <system/mm/heap_debug.h>
 #include <system/mm/mempool.h>
 
+#include <system/acpi/acpi.h>
+#include <system/apic/apic.h>
+#include <system/acpi/smp.h>
+#include <system/apic/apic_timer.h>
+#include <system/apic/irq_setup.h>
+#include <drivers/keyboard.h>
+
 #include <hal/cpu.h>
 
 #include <arch/x86/boot/multiboot.h>
@@ -105,44 +112,25 @@ _kernel_init(multiboot_info_t* mb_info)
         vmm_alloc_page((void*)(K_STACK_START + (i << 12)), PG_PREM_RW, PG_PREM_RW);
     }
     printf("[MM] Allocated %d pages for stack start at %p\n", K_STACK_SIZE>>12, (void*)K_STACK_START);
-
-    // // 初始化內核堆前的調試輸出
-    // printf("[MM-DEBUG] About to initialize kernel heap\n");
-    // printf("[MM-DEBUG] __heap_start = %p\n", __heap_start);
-    // printf("[MM-DEBUG] Heap end will be at %p\n", (void*)((uintptr_t)__heap_start + (4 << 20)));
     
     // 計算堆需要的頁數 (4MB)
     size_t heap_pages = (4 << 20) >> 12; // 4MB 轉換為頁數
-    // printf("[MM-DEBUG] Allocating %d pages for heap\n", heap_pages);
     
     // 為堆區域映射物理頁面
     for (size_t i = 0; i < heap_pages; i++) {
-        if (i % 64 == 0) {
-            // printf("[MM-DEBUG] Mapping heap page %d/%d\n", i, heap_pages);
-        }
-        
         if (!vmm_alloc_page((void*)((uintptr_t)__heap_start + (i << 12)), PG_PREM_RW, PG_PREM_RW)) {
-            // printf("[MM-DEBUG] Failed to allocate page %d for heap\n", i);
             // 處理錯誤，但繼續嘗試分配其他頁面
         }
     }
     
-    // printf("[MM-DEBUG] Finished mapping pages for heap\n");
-    
     // 測試寫入堆起始處
-    // printf("[MM-DEBUG] Testing access to heap start\n");
     *((volatile char*)__heap_start) = 0xAA;
-    // printf("[MM-DEBUG] Successfully wrote to heap start\n");
-    
-    // 嘗試增加監視點
-    // printf("[MM-DEBUG] Starting heap initialization\n");
     
     // 初始化内核堆
     kheap = heap_init((uintptr_t)__heap_start, 
                       (uintptr_t)__heap_start + (4 << 20), 
                       0xF0000000); // 起始4MB堆，最大到0xF0000000
     
-    // printf("[MM-DEBUG] Heap initialization completed\n");
     printf("[MM] Initialized kernel heap at %p\n", __heap_start);
 
     printf("[KERNEL] === Initialization Done === \n\n");
@@ -158,6 +146,32 @@ _kernel_post_init() {
     for (size_t i = 0; i < hhk_init_pg_count; i++) {
         vmm_unmap_page((void*)(i << 12));
     }
+    
+    // // 初始化 ACPI
+    // printf("[KERNEL] Initializing ACPI...\n");
+    // if (!acpi_init()) {
+    //     printf("[KERNEL] Failed to initialize ACPI\n");
+    //     // 可以繼續執行，因為有些系統可能沒有 ACPI
+    // }
+
+    // // 初始化 APIC (依賴 ACPI)
+    // if (acpi_is_supported()) {
+    //     printf("[KERNEL] Initializing APIC...\n");
+    //     if (!apic_init()) {
+    //         printf("[KERNEL] Failed to initialize APIC\n");
+    //         // 如果 APIC 初始化失敗，可能需要回退到 PIC 模式或處理錯誤
+    //     }
+        
+    //     // 初始化SMP
+    //     printf("[KERNEL] Initializing SMP...\n");
+    //     if (smp_init()) {
+    //         // 啟動應用處理器
+    //         smp_start_aps();
+    //     }
+    // } else {
+    //     printf("[KERNEL] ACPI not supported, skipping APIC/SMP initialization\n");
+    // }
+    
     printf("[KERNEL] === Post Initialization Done === \n\n");
 }
 
@@ -168,6 +182,9 @@ _kernel_main()
     
     printf("Hello higher half kernel world!\nWe are now running in virtual "
            "address space!\n\n");
+    
+    // 初始化鍵盤驅動程式
+    keyboard_init();
     
     cpu_get_brand(buf);
     printf("CPU: %s\n\n", buf);
@@ -351,5 +368,59 @@ _kernel_main()
     
     printf("\n[KERNEL] Memory management tests completed successfully\n");
     
+    // ACPI/APIC/SMP 測試代碼
+    if (acpi_is_supported()) {
+        printf("\n[KERNEL] ACPI/APIC Test:\n");
+        
+        // 顯示CPU信息
+        int cpu_count = acpi_get_cpu_count();
+        printf("[KERNEL] System has %d CPUs\n", cpu_count);
+        
+        for (int i = 0; i < cpu_count; i++) {
+            int apic_id = acpi_get_cpu_apic_id(i);
+            printf("[KERNEL] CPU %d: APIC ID = %d\n", i, apic_id);
+        }
+        
+        // 顯示本地APIC信息
+        uint32_t lapic_id = apic_get_id();
+        printf("[KERNEL] Current CPU APIC ID: %d\n", lapic_id >> 24);
+        
+        // 如果多核測試
+        if (smp_get_cpu_count() > 1) {
+            printf("[KERNEL] This is a multi-core system. BSP is running.\n");
+            
+            // 獲取所有CPU信息
+            for (int i = 0; i < smp_get_cpu_count(); i++) {
+                cpu_info_t* info = smp_get_cpu_info(i);
+                if (info && info->present) {
+                    printf("[KERNEL] CPU %d: APIC ID = %d, %s\n", 
+                           i, info->apic_id, 
+                           info->is_bsp ? "BSP" : "AP");
+                }
+            }
+            
+            // 測試處理器間中斷
+            printf("[KERNEL] Testing IPI broadcast...\n");
+            // 發送測試IPI（實際上這可能不會有可見效果，因為我們還沒有為AP設置IPI處理程序）
+            smp_broadcast_ipi(0x41, 1); // 向量0x41，排除自己
+        }
+        
+        // 測試APIC計時器
+        printf("[KERNEL] Testing APIC Timer...\n");
+        printf("[KERNEL] Sleeping for 1 second...\n");
+        apic_timer_sleep(1000); // 睡眠1秒
+        printf("[KERNEL] Wake up! System uptime: %d ms\n", apic_timer_get_ms());
+    }
+    
+    printf("\n[KERNEL] System initialization complete. Entering idle state.\n");
+    
+    // 啟用中斷並進入空閒狀態
+    cpu_enable_interrupts();
+    
+    while (1) {
+        cpu_idle(); // 等待下一個中斷
+    }
+    
+    // 不應該到達這裡
     // __asm__("int $0\n");
 }

@@ -1,0 +1,25 @@
+[MM] Freed 261872 pages start from 0x100000
+[MM] Base: 0x3fff0000, len: 64 KiB, type: 3
+[MM] Base: 0xfffc0000, len: 256 KiB, type: 2
+[MM] Allocated 49 pages for kernel.
+[MM] Mapped VGA to 0xb0000000.
+[MM] Allocated 256 pages for stack start at 0xffb00000
+[MM] Initialized kernel heap at 0xc0137000
+[KERNEL] === Initialization Done ===
+
+[KERNEL] === Post Initialization ===
+[MM] Releaseing 262 pages from 0x0.
+[KERNEL] === Post Initialization Done ===
+
+Hello higher half kernel world!
+We are now running in virtual address space!
+
+[Keyboard] Initializing keyboard
+CPU: AMD Athlon(tm) processored
+The kernel's base address mapping: 0xc0106000->0x106000
+[HEAP] Testing heap memory allocation
+=== Heap Layout === 0 bytes
+Heap end: 0xc053700014
+Heap max: 0xf0000000
+Block 0: addr=0xc0137014, size=4194272, USED
+
