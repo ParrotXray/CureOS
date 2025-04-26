@@ -98,8 +98,6 @@ void _set_idt_entry(uint32_t vector, uint16_t seg_selector, void (*isr)(), uint8
 }
 
 void _init_idt() {
-    printf("[IDT] Initializing Interrupt Descriptor Table\n");
-    
     // 初始化 CPU 異常處理 (0-31)
     for (int i = 0; i < 32; i++) {
         _set_idt_entry(i, 0x08, _asm_isr_handlers[i], 0);
@@ -117,6 +115,4 @@ void _init_idt() {
     _set_idt_entry(0x40, 0x08, _asm_apic_timer, 0);    // APIC Timer
     _set_idt_entry(0xFE, 0x08, _asm_apic_error, 0);    // APIC Error
     _set_idt_entry(0xFF, 0x08, _asm_apic_spurious, 0); // APIC Spurious
-    
-    printf("[IDT] IDT initialized with %d entries\n", IDT_ENTRY);
 }

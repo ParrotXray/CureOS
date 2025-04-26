@@ -21,5 +21,5 @@ Heap utilization: 100%
 === Memory Leak Report =======
 No memory leaks detected.
 [KERNEL] Memory management tests completed successfully
-Double Fault Exception (#DF) at EIP: 0x8, Error Code: 0xc01092e6
+Double Fault Exception (#DF) at EIP: 0x8, Error Code: 0xc01092c7
 

@@ -1,0 +1,11 @@
+Bochs internal debugger, type 'help' for help or 'c' to continue
+Switching to CPU0
+Next at t=0
+(0) [0x0000fffffff0] f000:fff0 (unk. ctxt): jmpf 0xf000:e05b          ; ea5be000f0
+(1) [0x0000fffffff0] f000:fff0 (unk. ctxt): jmpf 0xf000:e05b          ; ea5be000f0
+<bochs:1> c
+(0).[131564996] [0x00000010a06b] 0008:00000000c010a06b (unk. ctxt): mov edx, dword ptr ds:[eax+4] ; 8b5004
+Next at t=4349268209
+(0) [0x0000fffffff0] f000:fff0 (unk. ctxt): jmpf 0xf000:e05b          ; ea5be000f0
+(1) [0x00000009f048] 9f00:0048 (unk. ctxt): jmp .-3  (0xffff0047)     ; ebfd
+<bochs:2> q

@@ -142,35 +142,39 @@ _kernel_post_init() {
     size_t hhk_init_pg_count = ((uintptr_t)__init_hhk_end) >> 12;
     printf("[MM] Releaseing %d pages from 0x0.\n", hhk_init_pg_count);
 
-    // 清除 hhk_init 与前1MiB的映射
+    // 清除 hhk_init 与前1MiB的映射，但保留BIOS区域
     for (size_t i = 0; i < hhk_init_pg_count; i++) {
+        // 跳过BIOS区域(0xE0000-0x100000)的映射
+        if (i >= (0xE0000 >> 12) && i < (0x100000 >> 12)) {
+            continue;
+        }
         vmm_unmap_page((void*)(i << 12));
     }
     
-    // // 初始化 ACPI
-    // printf("[KERNEL] Initializing ACPI...\n");
-    // if (!acpi_init()) {
-    //     printf("[KERNEL] Failed to initialize ACPI\n");
-    //     // 可以繼續執行，因為有些系統可能沒有 ACPI
-    // }
+    // 初始化 ACPI
+    printf("[KERNEL] Initializing ACPI...\n");
+    if (!acpi_init()) {
+        printf("[KERNEL] Failed to initialize ACPI\n");
+        // 可以繼續執行，因為有些系統可能沒有 ACPI
+    }        printf("[KERNEL] Failed to initialize APIC\n");
+    
 
-    // // 初始化 APIC (依賴 ACPI)
-    // if (acpi_is_supported()) {
-    //     printf("[KERNEL] Initializing APIC...\n");
-    //     if (!apic_init()) {
-    //         printf("[KERNEL] Failed to initialize APIC\n");
+    // 初始化 APIC (依賴 ACPI)
+    if (acpi_is_supported()) {
+        printf("[KERNEL] Initializing APIC...\n");
+        if (!apic_init()) {
     //         // 如果 APIC 初始化失敗，可能需要回退到 PIC 模式或處理錯誤
-    //     }
+        }
         
-    //     // 初始化SMP
-    //     printf("[KERNEL] Initializing SMP...\n");
-    //     if (smp_init()) {
-    //         // 啟動應用處理器
-    //         smp_start_aps();
-    //     }
-    // } else {
-    //     printf("[KERNEL] ACPI not supported, skipping APIC/SMP initialization\n");
-    // }
+        // 初始化SMP
+        printf("[KERNEL] Initializing SMP...\n");
+        if (smp_init()) {
+            // 啟動應用處理器
+            smp_start_aps();
+        }
+    } else {
+        printf("[KERNEL] ACPI not supported, skipping APIC/SMP initialization\n");
+    }
     
     printf("[KERNEL] === Post Initialization Done === \n\n");
 }

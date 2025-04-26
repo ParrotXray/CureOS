@@ -37,6 +37,12 @@ _init_page(ptd_t* ptd) {
         SET_PTE(ptd, PG_TABLE_IDENTITY, i, PTE(PG_PREM_RW, (i << 12)))
     }
 
+    // 特别确保BIOS区域(0xE0000-0x100000)的映射，使用只读权限
+    for (uint32_t i = 0xE0000 >> 12; i < 0x100000 >> 12; i++)
+    {
+        SET_PTE(ptd, PG_TABLE_IDENTITY, i, PTE(PG_PREM_R, (i << 12)))
+    }
+
     // 对等映射我们的hhk_init，这样一来，当分页与地址转换开启后，我们依然能够照常执行最终的 jmp 指令来跳转至
     //  内核的入口点
     for (uint32_t i = 0; i < HHK_PAGE_COUNT; i++)
