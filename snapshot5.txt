@@ -1,5 +1,4 @@
-¤MM] Releaseing 262 pages from 0x0.
-[KERNEL] Initializing ACPI...
+¤KERNEL] Initializing ACPI...
 [ACPI] Initializing ACPI subsystem
 [ACPI] Searching for RSDP...
 [ACPI] Starting BIOS area search for RSDP
@@ -15,11 +14,12 @@
 [ACPI] Record Type=1, Length=12 at 0xffff0fbc
 [ACPI] Record Type=2, Length=10 at 0xffff0fc8SIB=0
 [ACPI] --- MADT Records Dump End ---Source=0, GSI=2, Flags=0x0
-[KERNEL] Initializing APIC...mplete
-[APIC] Local APIC physical address: 0xfee00000
-[APIC] Legacy PIC disabledical address: 0xfec00000
-[APIC] IO APIC supports 24 redirection entries: 6
-[ACPI] Looking for table 'APIC'
-[ACPI] Found valid table 'APIC' at 0x3fff0f80
+[KERNEL] Failed to initialize APICe
+[APIC] Initializing APICIC...
+[APIC] IO APIC ID: 2, physical address: 0xfec00000
+[APIC] Local APIC Version: 20, Max LVT entries: 6
+[IRQ] Configuring IO APIC IRQsirection entries
+[ACPI] RSDT contains 4 entries'
+[IRQ] Found 1 interrupt source overridesf0f80
 [IRQ] Override for IRQ 0: GSI=2, TriggerMode=Edge, Polarity=High
 

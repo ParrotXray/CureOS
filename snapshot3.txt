@@ -1,0 +1,25 @@
+¤MM] Mem: 636 KiB, Extended Mem: 1047488 KiB
+[MM] Base: 0x0, len: 636 KiB, type: 1
+[MM] Freed 159 pages start from 0x0
+[MM] Base: 0x9f000, len: 4 KiB, type: 2
+[MM] Base: 0xe8000, len: 96 KiB, type: 2
+[MM] Base: 0x100000, len: 1047488 KiB, type: 1
+[MM] Freed 261872 pages start from 0x100000
+[MM] Base: 0x3fff0000, len: 64 KiB, type: 3
+[MM] Base: 0xfffc0000, len: 256 KiB, type: 2
+[MM] Allocated 49 pages for kernel.
+[MM] Mapped VGA to 0xb0000000.
+[MM] Allocated 256 pages for stack start at 0xffb00000
+[MM] Initialized kernel heap at 0xc0137000
+[KERNEL] === Initialization Done ===
+
+[KERNEL] === Post Initialization ===
+[MM] Releaseing 262 pages from 0x0.
+[KERNEL] Initializing ACPI...
+[ACPI] Initializing ACPI subsystem
+[ACPI] Searching for RSDP...
+[ACPI] Starting BIOS area search for RSDP
+[ACPI] Valid RSDP found at physical address 0xfa370
+[ACPI] Found RSDP at 0xfa370, revision 0
+[ACPI] Using RSDT at physical address 0x3fff0000
+

@@ -84,38 +84,45 @@ static void acpi_parse_madt() {
         printf("[ACPI] MADT not available for parsing\n");
         return;
     }
-    
+
     printf("[ACPI] Parsing MADT table\n");
-    
-    // 獲取本地APIC地址
+
+    // 取得本地 APIC 地址
     local_apic_addr = madt->local_apic_addr;
     printf("[ACPI] Local APIC address: 0x%x\n", local_apic_addr);
-    
-    // 解析MADT記錄
-    uintptr_t end = (uintptr_t)madt + madt->header.length;
+
     uintptr_t current = (uintptr_t)madt + sizeof(acpi_madt_t);
-    
-    cpu_count = 0; // 重置CPU計數
-    
-    while (current < end && current >= (uintptr_t)madt) { // 添加下界檢查
+    uintptr_t end = (uintptr_t)madt + madt->header.length;
+
+    cpu_count = 0; // 重置CPU數量計數
+
+    printf("[ACPI] --- MADT Records Dump Start ---\n");
+
+    while (current < end && current >= (uintptr_t)madt) {
         acpi_madt_record_header_t* record = (acpi_madt_record_header_t*)current;
-        
-        // 檢查記錄長度的有效性
-        if (!record || record->length < 2 || current + record->length > end) {
-            printf("[ACPI] Invalid MADT record, stopping parsing\n");
+
+        if (!record || record->length < 2 || (current + record->length > end)) {
+            printf("[ACPI] Invalid MADT record at 0x%x, stopping parsing\n", current);
             break;
         }
-        
+
+        printf("[ACPI] Record Type=%d, Length=%d at 0x%x\n",
+               record->type, record->length, current);
+
         switch (record->type) {
             case ACPI_MADT_TYPE_LOCAL_APIC: {
                 if (record->length >= sizeof(acpi_madt_local_apic_t)) {
                     acpi_madt_local_apic_t* local_apic = (acpi_madt_local_apic_t*)record;
-                    // 檢查處理器標誌位，確認處理器啟用
-                    if (local_apic->flags & 1) {
+                    printf("[ACPI]   Local APIC: Processor ID=%d, APIC ID=%d, Flags=0x%x\n",
+                           local_apic->acpi_processor_id,
+                           local_apic->apic_id,
+                           local_apic->flags);
+
+                    if (local_apic->flags & 1) { // Processor is enabled
                         if (cpu_count < MAX_CPU_COUNT) {
                             cpu_apic_ids[cpu_count++] = local_apic->apic_id;
-                            printf("[ACPI] Found processor: ID=%d, APIC ID=%d\n", 
-                                local_apic->acpi_processor_id, local_apic->apic_id);
+                            printf("[ACPI]   -> Registered CPU #%d with APIC ID=%d\n",
+                                   cpu_count - 1, local_apic->apic_id);
                         }
                     }
                 }
@@ -124,25 +131,52 @@ static void acpi_parse_madt() {
             case ACPI_MADT_TYPE_IO_APIC: {
                 if (record->length >= sizeof(acpi_madt_io_apic_t)) {
                     acpi_madt_io_apic_t* io_apic = (acpi_madt_io_apic_t*)record;
+                    printf("[ACPI]   IO APIC: ID=%d, Address=0x%x, GSIB=%d\n",
+                           io_apic->io_apic_id,
+                           io_apic->io_apic_addr,
+                           io_apic->global_system_interrupt_base);
+
                     io_apic_id = io_apic->io_apic_id;
                     io_apic_addr = io_apic->io_apic_addr;
-                    printf("[ACPI] Found IO APIC: ID=%d, Address=0x%x\n", 
-                        io_apic_id, io_apic_addr);
                 }
                 break;
             }
             case ACPI_MADT_TYPE_INT_SRC_OVERRIDE: {
                 if (record->length >= sizeof(acpi_madt_int_src_override_t)) {
                     acpi_madt_int_src_override_t* override = (acpi_madt_int_src_override_t*)record;
-                    printf("[ACPI] Found Interrupt Override: Bus=%d, Source=%d, GSI=%d, Flags=0x%x\n", 
-                        override->bus, override->source, override->global_system_interrupt, override->flags);
+                    printf("[ACPI]   Interrupt Override: Bus=%d, Source=%d, GSI=%d, Flags=0x%x\n",
+                           override->bus,
+                           override->source,
+                           override->global_system_interrupt,
+                           override->flags);
                 }
                 break;
             }
-            // 其他記錄類型省略
+            case ACPI_MADT_TYPE_NMI_SRC: {
+                printf("[ACPI]   NMI Source: (Details skipped)\n");
+                break;
+            }
+            case ACPI_MADT_TYPE_LOCAL_APIC_NMI: {
+                printf("[ACPI]   Local APIC NMI: (Details skipped)\n");
+                break;
+            }
+            default: {
+                printf("[ACPI]   Unknown MADT record type %d (Details skipped)\n",
+                       record->type);
+                break;
+            }
         }
-        
+
         current += record->length;
+    }
+
+    printf("[ACPI] --- MADT Records Dump End ---\n");
+
+    // 最後確認是否找到IOAPIC
+    if (io_apic_addr == 0) {
+        printf("[ACPI] No IO APIC found in MADT, will fallback to default IO APIC address\n");
+        io_apic_addr = 0xFEC00000;
+        io_apic_id = 0;
     }
 }
 
@@ -284,7 +318,25 @@ int acpi_init() {
     // 根據ACPI版本選擇RSDT或XSDT
     if (rsdp->revision >= 2 && rsdp->xsdt_address) {
         printf("[ACPI] Using XSDT at physical address 0x%llx\n", rsdp->xsdt_address);
-        xsdt = (acpi_xsdt_t*)P2V(rsdp->xsdt_address);
+        printf("[ACPI] Mapping XSDT memory...\n");
+        // xsdt = (acpi_xsdt_t*)P2V(rsdp->xsdt_address);
+
+        uintptr_t xsdt_phys = (uintptr_t)rsdp->xsdt_address;
+
+        // 映射 XSDT 表
+        for (uintptr_t offset = 0; offset < 0x1000; offset += 0x1000) {
+            vmm_map_page((void*)(P2V(xsdt_phys + offset)), 
+                         xsdt_phys + offset, 
+                         PG_PREM_RW, PG_PREM_RW);
+        }
+        
+        // 轉虛擬地址
+        xsdt = (acpi_xsdt_t*)P2V(xsdt_phys);
+        
+        if (acpi_checksum(xsdt, xsdt->header.length) != 0) {
+            printf("[ACPI] XSDT checksum invalid, trying RSDT\n");
+            xsdt = NULL;
+        }
         
         if (!xsdt) {
             printf("[ACPI] Failed to map XSDT, trying RSDT\n");
@@ -296,7 +348,29 @@ int acpi_init() {
     
     if (!xsdt && rsdp->rsdt_address) {
         printf("[ACPI] Using RSDT at physical address 0x%x\n", rsdp->rsdt_address);
-        rsdt = (acpi_rsdt_t*)P2V(rsdp->rsdt_address);
+        printf("[ACPI] Mapping RSDT memory...\n");
+
+        // 預先映射 RSDT 完整表格
+        uintptr_t rsdt_phys = rsdp->rsdt_address;
+        acpi_rsdt_t* rsdt_tmp = (acpi_rsdt_t*)(uintptr_t)rsdt_phys;
+        
+        // 注意：rsdt_tmp 這時候直接是物理地址指標，不能直接解dereference
+        // 所以我們假設RSDT表長度不會超過一兩個頁面，保守做法：
+        
+        for (uintptr_t offset = 0; offset < 0x1000; offset += 0x1000) {
+            vmm_map_page((void*)(P2V(rsdt_phys + offset)),
+                         rsdt_phys + offset,
+                         PG_PREM_RW, PG_PREM_RW);
+        }
+        
+        // 再去用P2V轉虛擬位址來讀
+        rsdt = (acpi_rsdt_t*)P2V(rsdt_phys);
+        
+        if (acpi_checksum(rsdt, rsdt->header.length) != 0) {
+            printf("[ACPI] RSDT checksum invalid, using default values\n");
+            rsdt = NULL;
+            return 1;
+        }
         
         if (!rsdt) {
             printf("[ACPI] Failed to map RSDT, using default values\n");

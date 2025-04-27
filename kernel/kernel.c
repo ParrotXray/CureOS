@@ -156,14 +156,15 @@ _kernel_post_init() {
     if (!acpi_init()) {
         printf("[KERNEL] Failed to initialize ACPI\n");
         // 可以繼續執行，因為有些系統可能沒有 ACPI
-    }        printf("[KERNEL] Failed to initialize APIC\n");
+    }        
     
 
     // 初始化 APIC (依賴 ACPI)
     if (acpi_is_supported()) {
         printf("[KERNEL] Initializing APIC...\n");
         if (!apic_init()) {
-    //         // 如果 APIC 初始化失敗，可能需要回退到 PIC 模式或處理錯誤
+            // 如果 APIC 初始化失敗，可能需要回退到 PIC 模式或處理錯誤
+            printf("[KERNEL] Failed to initialize APIC\n");
         }
         
         // 初始化SMP

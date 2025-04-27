@@ -1,0 +1,25 @@
+¤KERNEL] === Initialization Done ===
+
+[KERNEL] === Post Initialization ===
+[MM] Releaseing 262 pages from 0x0.
+[KERNEL] Initializing ACPI...
+[ACPI] Initializing ACPI subsystem
+[ACPI] Searching for RSDP...
+[ACPI] Starting BIOS area search for RSDP
+[ACPI] Valid RSDP found at physical address 0xfa370
+[ACPI] Found RSDP at 0xfa370, revision 0
+[ACPI] Mapping RSDT memory... address 0x3fff0000
+[ACPI] RSDT contains 4 entries'
+[ACPI] Found MADT, parsing APIC information80
+[ACPI] Local APIC address: 0xfee00000
+[ACPI] Found processor: ID=1, APIC ID=1
+[ACPI] Found Interrupt Override: Bus=0, Source=0, GSI=2, Flags=0x0
+[KERNEL] Failed to initialize APICe
+[APIC] Initializing APICIC...
+[APIC] IO APIC ID: 2, physical address: 0xfec00000
+[APIC] Local APIC Version: 20, Max LVT entries: 6
+[IRQ] Configuring IO APIC IRQsirection entries
+[ACPI] RSDT contains 4 entries'
+[IRQ] Found 1 interrupt source overridesf0f80
+[IRQ] Override for IRQ 0: GSI=2, TriggerMode=Edge, Polarity=High
+
