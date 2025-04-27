@@ -115,118 +115,101 @@ static void parse_interrupt_overrides() {
 // 配置IO APIC中斷重定向
 void configure_io_apic_irqs() {
     printf("[IRQ] Configuring IO APIC IRQs\n");
-    
-    // 獲取IO APIC地址
-    uint8_t io_apic_id;
-    uintptr_t io_apic_addr;
-    
-    if (!acpi_get_io_apic_info(&io_apic_id, &io_apic_addr)) {
-        printf("[IRQ] Failed to get IO APIC information\n");
+
+    // 取得 IO APIC 已映射的虛擬基址
+    uintptr_t io_apic_base = apic_get_io_apic_base();
+    if (!io_apic_base) {
+        printf("[IRQ] IO APIC base not mapped\n");
         return;
     }
-    
-    // 從ACPI獲取中斷重定向信息
+
+    // 從 ACPI 解析 Interrupt Source Override
     parse_interrupt_overrides();
-    
-    // 更新IRQ配置
     update_irq_config_from_overrides();
-    
-    // 獲取當前CPU的APIC ID
-    uint32_t apic_id = apic_get_id() >> 24;
-    
-    // 配置每個IRQ
-    for (int i = 0; i < 16; i++) {
-        irq_config_t* config = &isa_irq_config[i];
-        
-        // 查找此IRQ是否有覆蓋
-        uint32_t gsi = i;  // 默認為IRQ號
-        
+
+    // 取得 IO APIC 能處理的最大 redirection entry
+    int max_entry = io_apic_max_redirection_entry(io_apic_base);
+
+    // 取得本 CPU 的 APIC ID (高 8 位)
+    uint8_t dest_apic = (apic_get_id() >> 24) & 0xFF;
+
+    // 依序配置 ISA IRQ 0-15
+    for (uint8_t irq = 0; irq < 16; irq++) {
+
+        // GSI (可能被 Override)
+        uint32_t gsi = irq;
         for (int j = 0; j < override_count; j++) {
-            if (irq_overrides[j].irq_source == i) {
+            if (irq_overrides[j].irq_source == irq) {
                 gsi = irq_overrides[j].gsi;
                 break;
             }
         }
-        
-        // 設置中斷重定向表中的標誌
-        uint32_t flags = config->trigger_mode | config->polarity;
-        if (config->masked) {
-            flags |= IOAPIC_REDTBL_MASKED;
-        }
-        
-        // 配置IO APIC
+        if (gsi > max_entry) continue;          // 超出 IO APIC 範圍，跳過
+
+        irq_config_t* cfg = &isa_irq_config[irq];
+
+        uint32_t flags = cfg->trigger_mode | cfg->polarity;
+        if (cfg->masked) flags |= IOAPIC_REDTBL_MASKED;
+
         io_apic_setup_redirection(
-            io_apic_addr,
-            gsi,                 // GSI號 (可能被覆蓋)
-            config->vector,      // 向量號
-            config->delivery_mode,
+            io_apic_base,
+            gsi,
+            cfg->vector,
+            cfg->delivery_mode,
             IOAPIC_REDTBL_DESTMOD_PHYSICAL,
-            apic_id,
+            dest_apic,
             flags
         );
-        
-        printf("[IRQ] Configured IRQ %d (%s): Vector=%d, GSI=%d, %s\n",
-               i, config->name, config->vector, gsi,
-               config->masked ? "Masked" : "Unmasked");
+
+        printf("[IRQ] Configured IRQ %d (%s): Vector=%u, GSI=%u, %s\n",
+               irq, cfg->name, cfg->vector, gsi,
+               cfg->masked ? "Masked" : "Unmasked");
     }
-    
+
     printf("[IRQ] IO APIC configuration complete\n");
 }
 
-// 啟用特定IRQ
-void enable_irq(uint8_t irq) {
+// 啟用特定 IRQ
+void enable_irq(uint8_t irq)
+{
     if (irq >= 16) return;
-    
-    // 獲取IO APIC地址
-    uint8_t io_apic_id;
-    uintptr_t io_apic_addr;
-    
-    if (!acpi_get_io_apic_info(&io_apic_id, &io_apic_addr)) {
-        return;
-    }
-    
-    // 查找此IRQ是否有覆蓋
+
+    uintptr_t io_apic_addr = apic_get_io_apic_base();
+    if (!io_apic_addr) return;               // 尚未映射
+
+    // 查找是否有 ACPI override
     uint32_t gsi = irq;
-    
     for (int j = 0; j < override_count; j++) {
         if (irq_overrides[j].irq_source == irq) {
             gsi = irq_overrides[j].gsi;
             break;
         }
     }
-    
-    // 取消掩蔽
+
     io_apic_unmask_irq(io_apic_addr, gsi);
     isa_irq_config[irq].masked = 0;
-    
+
     printf("[IRQ] Enabled IRQ %d (%s)\n", irq, isa_irq_config[irq].name);
 }
 
-// 禁用特定IRQ
-void disable_irq(uint8_t irq) {
+// 禁用特定 IRQ
+void disable_irq(uint8_t irq)
+{
     if (irq >= 16) return;
-    
-    // 獲取IO APIC地址
-    uint8_t io_apic_id;
-    uintptr_t io_apic_addr;
-    
-    if (!acpi_get_io_apic_info(&io_apic_id, &io_apic_addr)) {
-        return;
-    }
-    
-    // 查找此IRQ是否有覆蓋
+
+    uintptr_t io_apic_addr = apic_get_io_apic_base();
+    if (!io_apic_addr) return;
+
     uint32_t gsi = irq;
-    
     for (int j = 0; j < override_count; j++) {
         if (irq_overrides[j].irq_source == irq) {
             gsi = irq_overrides[j].gsi;
             break;
         }
     }
-    
-    // 掩蔽
+
     io_apic_mask_irq(io_apic_addr, gsi);
     isa_irq_config[irq].masked = 1;
-    
+
     printf("[IRQ] Disabled IRQ %d (%s)\n", irq, isa_irq_config[irq].name);
 }

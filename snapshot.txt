@@ -1,25 +1,25 @@
-¤MM] Releaseing 262 pages from 0x0.
-[KERNEL] Initializing ACPI...
-[ACPI] Initializing ACPI subsystem
-[ACPI] Searching for RSDP...
-[ACPI] Starting BIOS area search for RSDP
-[ACPI] Valid RSDP found at physical address 0xfa370
-[ACPI] Found RSDP at 0xfa370, revision 0
-[ACPI] Mapping RSDT memory... address 0x3fff0000
-[ACPI] RSDT contains 4 entries'
-[ACPI] Found MADT, parsing APIC information80
-[ACPI] Local APIC address: 0xfee00000
-[ACPI] Record Type=0, Length=8 at 0xffff0fac
-[ACPI]   -> Registered CPU #0 with APIC ID=0=0, Flags=0x1
-[ACPI]   Local APIC: Processor ID=1, APIC ID=1, Flags=0x1
-[ACPI] Record Type=1, Length=12 at 0xffff0fbc
-[ACPI] Record Type=2, Length=10 at 0xffff0fc8SIB=0
-[ACPI] --- MADT Records Dump End ---Source=0, GSI=2, Flags=0x0
-[KERNEL] Initializing APIC...mplete
-[APIC] Local APIC physical address: 0xfee00000
-[APIC] Legacy PIC disabledical address: 0xfec00000
-[APIC] IO APIC supports 24 redirection entries: 6
-[ACPI] Looking for table 'APIC'
+¤ACPI] Looking for table 'APIC'
+[ACPI] RSDT contains 4 entries
 [ACPI] Found valid table 'APIC' at 0x3fff0f80
+[IRQ] Found 1 interrupt source overrides
 [IRQ] Override for IRQ 0: GSI=2, TriggerMode=Edge, Polarity=High
-
+[IRQ] Configured IRQ 0 (PIT Timer): Vector=32, GSI=2, Masked
+[IRQ] Configured IRQ 1 (Keyboard): Vector=33, GSI=1, Unmasked
+[IRQ] Configured IRQ 2 (Cascade): Vector=34, GSI=2, Masked
+[IRQ] Configured IRQ 3 (COM2): Vector=35, GSI=3, Masked
+[IRQ] Configured IRQ 4 (COM1): Vector=36, GSI=4, Masked
+[IRQ] Configured IRQ 5 (LPT2): Vector=37, GSI=5, Masked
+[IRQ] Configured IRQ 6 (Floppy): Vector=38, GSI=6, Masked
+[IRQ] Configured IRQ 7 (LPT1): Vector=39, GSI=7, Masked
+[IRQ] Configured IRQ 8 (RTC): Vector=40, GSI=8, Masked
+[IRQ] Configured IRQ 9 (Free): Vector=41, GSI=9, Masked
+[IRQ] Configured IRQ 10 (Free): Vector=42, GSI=10, Masked
+[IRQ] Configured IRQ 11 (Free): Vector=43, GSI=11, Masked
+[IRQ] Configured IRQ 12 (PS/2 Mouse): Vector=44, GSI=12, Masked
+[IRQ] Configured IRQ 13 (FPU): Vector=45, GSI=13, Masked
+[IRQ] Configured IRQ 14 (Primary ATA): Vector=46, GSI=14, Masked
+[IRQ] Configured IRQ 15 (Secondary ATA): Vector=47, GSI=15, Masked
+[IRQ] IO APIC configuration complete
+[APIC Timer] Initializing APIC timer...
+[APIC Timer] Calibrating APIC timer using PIT...
+.

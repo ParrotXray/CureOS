@@ -243,4 +243,18 @@ void pic_disable();
  */
 void apic_configure_lint(int lint, uint8_t vector, uint32_t delivery_mode, int masked);
 
+/**
+ * @brief 取得已映射的 IO APIC 基址 (虛擬地址)
+ *
+ * 這個函式在 APIC 初始化完成後，回傳內核為 IO APIC
+ * 建立的固定虛擬位址。其餘模組應透過此函式來讀寫
+ * IO APIC，而不是使用實體位址，避免未映射造成的
+ * page fault。
+ *
+ * @return uintptr_t
+ *         - 非 0：IO APIC 的虛擬基址  
+ *         - 0：尚未映射或初始化失敗
+ */
+uintptr_t apic_get_io_apic_base(void);
+
 #endif /* _LUNAIX_APIC_H */

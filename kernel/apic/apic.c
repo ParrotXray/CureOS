@@ -310,3 +310,6 @@ void apic_broadcast_ipi(uint32_t delivery_mode, uint8_t vector, int exclude_self
         __asm__ volatile("pause");
     }
 }
+
+// 取得已映射的 IO APIC 基址
+uintptr_t apic_get_io_apic_base(void) { return io_apic_virt_addr; }

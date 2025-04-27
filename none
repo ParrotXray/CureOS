@@ -4,8 +4,13 @@ Next at t=0
 (0) [0x0000fffffff0] f000:fff0 (unk. ctxt): jmpf 0xf000:e05b          ; ea5be000f0
 (1) [0x0000fffffff0] f000:fff0 (unk. ctxt): jmpf 0xf000:e05b          ; ea5be000f0
 <bochs:1> c
-(0).[135088023] [0x00000010691f] 0008:00000000c010691f (unk. ctxt): mov dword ptr ds:[eax], edx ; 8910
-Next at t=4345850402
+(0).[313038339] [0x00000010a929] 0008:00000000c010a929 (unk. ctxt): mov byte ptr ds:[ecx+eax], dl ; 881401
+Next at t=4363171041
 (0) [0x0000fffffff0] f000:fff0 (unk. ctxt): jmpf 0xf000:e05b          ; ea5be000f0
 (1) [0x00000009f048] 9f00:0048 (unk. ctxt): jmp .-3  (0xffff0047)     ; ebfd
-<bochs:2> q
+<bochs:2> c
+(0).[4627788793] [0x00000010a929] 0008:00000000c010a929 (unk. ctxt): mov byte ptr ds:[ecx+eax], dl ; 881401
+Next at t=8676583334
+(0) [0x0000fffffff0] f000:fff0 (unk. ctxt): jmpf 0xf000:e05b          ; ea5be000f0
+(1) [0x00000009f048] 9f00:0048 (unk. ctxt): jmp .-3  (0xffff0047)     ; ebfd
+<bochs:3> q
