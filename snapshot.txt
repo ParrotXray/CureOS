@@ -1,7 +1,4 @@
-Total alloœated bytes: 0
-Current allocated bytes: 4218860
-Peak allocated bytes: 0
-Total overhead bytes: 0
+Total over—ead bytes: 0
 Total heap size: 4218860
 Free heap size: 0
 Heap utilization: 100%
@@ -22,4 +19,7 @@ No memory leaks detected.
 [KERNEL] Testing IPI broadcast...
 [KERNEL] Testing APIC Timer...
 [KERNEL] Sleeping for 1 second...
+[KERNEL] Wake up! System uptime: 20 ms
+
+[KERNEL] System initialization complete. Entering idle state.
 

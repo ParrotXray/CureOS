@@ -13,6 +13,9 @@ static void handle_apic_spurious(isr_param* param);
 // 註冊 IRQ 處理程序的陣列
 static irq_handler_t irq_handlers[16] = {0};
 
+extern volatile uint32_t timer_ticks;
+extern uint32_t timer_frequency;
+
 // 異常處理程序
 void isr0(isr_param* param) {
     tty_clear();
@@ -218,15 +221,12 @@ static void handle_syscall(isr_param* param) {
 
 // APIC 計時器中斷處理函數
 static void handle_apic_timer(isr_param* param) {
-    // 計時器中斷處理邏輯 (如時間片輪轉)
-    static int tick_count = 0;
-    
-    tick_count++;
-    if (tick_count % 100 == 0) {
-        printf("APIC Timer tick: %d\n", tick_count);
+    timer_ticks++;
+    if (timer_frequency && (timer_ticks % timer_frequency == 0))
+    {
+        uint32_t s = timer_ticks / timer_frequency;
+        printf("APIC Uptime: %u seconds\n", s);
     }
-    
-    // 發送 EOI
     apic_send_eoi();
 }
 

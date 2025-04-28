@@ -6,23 +6,9 @@
 #include <hal/cpu.h>
 
 // 計時器變數
-static volatile uint32_t timer_ticks = 0;
-static uint32_t timer_frequency = 0;      // Hz
-static uint32_t ticks_per_ms = 0;
-
-// 計時器中斷處理程序
-static void apic_timer_handler(isr_param* param) {
-    timer_ticks++;
-    
-    // 每秒顯示一次計時器狀態
-    if (timer_ticks % timer_frequency == 0) {
-        uint32_t seconds = timer_ticks / timer_frequency;
-        printf("[APIC Timer] Uptime: %u seconds\n", seconds);
-    }
-    
-    // 發送EOI
-    apic_send_eoi();
-}
+volatile uint32_t timer_ticks = 0;
+uint32_t timer_frequency = 0;      // Hz
+uint32_t ticks_per_ms = 0;
 
 // 使用PIT校準APIC計時器
 static void apic_timer_calibrate() {
@@ -62,8 +48,14 @@ static void apic_timer_calibrate() {
     printf("[APIC Timer] TSC ticks: %llu\n", tsc_ticks);
     
     // 計算APIC計時器頻率，假設校準期間是10ms
-    timer_frequency = apic_ticks * 100;  // 轉換為每秒頻率
-    ticks_per_ms = apic_ticks / 10;      // 每毫秒的計數值
+    ticks_per_ms  = apic_ticks / 10;   // 每毫秒要倒數多少
+    timer_frequency = ticks_per_ms * 1000;
+
+    /* 校準失敗 fallback：假設 APIC 時脈 1 MHz */
+    if (ticks_per_ms == 0) {
+        ticks_per_ms  = 1000;          // 1 tick = 1 µs，1 ms = 1000 tick
+        timer_frequency = 1000000;
+    }
     
     printf("[APIC Timer] Frequency: %u Hz\n", timer_frequency);
     printf("[APIC Timer] Ticks per ms: %u\n", ticks_per_ms);
@@ -79,15 +71,12 @@ void apic_timer_init() {
         return;
     }
     
-    // 註冊計時器中斷處理程序
-    register_irq_handler(APIC_TIMER_IRQ, apic_timer_handler);
-    
     // 校準APIC計時器
     apic_timer_calibrate();
     
     // 設置計時器使用週期模式
     printf("[APIC Timer] Setting up APIC timer in periodic mode\n");
-    apic_configure_timer(APIC_TIMER_VECTOR, APIC_TIMER_PERIODIC, ticks_per_ms * 10);  // 10ms中斷
+    apic_configure_timer(APIC_TIMER_VECTOR, APIC_TIMER_PERIODIC, ticks_per_ms);  // 10ms中斷
     
     printf("[APIC Timer] APIC timer initialized at %u.%u MHz\n", 
            timer_frequency / 1000000, (timer_frequency % 1000000) / 1000);
@@ -96,12 +85,12 @@ void apic_timer_init() {
 // 獲取系統啟動後的毫秒數
 uint32_t apic_timer_get_ms() {
     if (ticks_per_ms == 0) return 0;  // 計時器未初始化
-    return timer_ticks * 10;  // 10ms每次中斷
+    return timer_ticks;  // 10ms每次中斷
 }
 
 // 暫停指定的毫秒數
 void apic_timer_sleep(uint32_t ms) {
-    uint32_t target_ticks = timer_ticks + (ms / 10);  // 10ms每次中斷
+    uint32_t target_ticks = timer_ticks + ms;  // 10ms每次中斷
     while (timer_ticks < target_ticks) {
         __asm__ volatile("hlt");  // 處理器閒置，等待下一個中斷
     }

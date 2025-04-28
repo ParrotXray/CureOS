@@ -413,14 +413,15 @@ _kernel_main()
         // 測試APIC計時器
         printf("[KERNEL] Testing APIC Timer...\n");
         printf("[KERNEL] Sleeping for 1 second...\n");
-        apic_timer_sleep(1000); // 睡眠1秒
+        cpu_enable_interrupts();
+
+        // 嘗試睡眠
+        apic_timer_sleep(1000); // 睡眠 1 秒
         printf("[KERNEL] Wake up! System uptime: %d ms\n", apic_timer_get_ms());
     }
     
     printf("\n[KERNEL] System initialization complete. Entering idle state.\n");
-    
-    // 啟用中斷並進入空閒狀態
-    cpu_enable_interrupts();
+
     
     while (1) {
         cpu_idle(); // 等待下一個中斷
