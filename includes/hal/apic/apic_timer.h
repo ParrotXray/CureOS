@@ -3,6 +3,22 @@
 
 #include <stdint.h>
 
+// APIC Timer相關常數
+#define APIC_TIMER_VECTOR    0x40
+#define APIC_TIMER_IRQ       0
+
+// 校準相關常數
+#define CALIBRATION_LOOPS    10000000
+#define PIT_FREQ            1193182
+#define PIT_DIVISOR         1193
+#define PIT_FREQUENCY       (PIT_FREQ / PIT_DIVISOR) // 約1000Hz
+
+// PIT相關端口
+#define PIT_CHANNEL0        0x40
+#define PIT_CHANNEL1        0x41
+#define PIT_CHANNEL2        0x42
+#define PIT_COMMAND         0x43
+
 /**
  * @brief 初始化並校準APIC計時器
  */

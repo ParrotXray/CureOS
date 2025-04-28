@@ -1,4 +1,4 @@
-#include <system/acpi/acpi.h>
+#include <hal/acpi/acpi.h>
 #include <system/mm/vmm.h>
 #include <system/mm/page.h>
 #include <libc/string.h>

@@ -10,11 +10,11 @@
 #include <system/mm/heap_debug.h>
 #include <system/mm/mempool.h>
 
-#include <system/acpi/acpi.h>
-#include <system/apic/apic.h>
-#include <system/acpi/smp.h>
-#include <system/apic/apic_timer.h>
-#include <system/apic/irq_setup.h>
+#include <hal/acpi/acpi.h>
+#include <hal/apic/apic.h>
+#include <hal/acpi/smp.h>
+#include <hal/apic/apic_timer.h>
+#include <hal/apic/irq_setup.h>
 #include <drivers/keyboard.h>
 
 #include <hal/cpu.h>

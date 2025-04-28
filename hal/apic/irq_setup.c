@@ -1,6 +1,6 @@
-#include <system/apic/apic.h>
-#include <system/acpi/acpi.h>
-#include <system/apic/irq_setup.h>
+#include <hal/apic/apic.h>
+#include <hal/acpi/acpi.h>
+#include <hal/apic/irq_setup.h>
 #include <arch/x86/interrupts.h>
 #include <libc/stdio.h>
 

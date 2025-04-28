@@ -6,21 +6,21 @@
     .type ap_entry, @function
 
 ap_entry:
-    # 設置棧指針
-    # 每個CPU使用不同的棧空間，這裡先使用臨時棧
+    # 關閉中斷
+    cli
+    
+    # 設置臨時堆疊
     movl $ap_stack_top, %esp
     
-    # 設置頁目錄寄存器 (CR3)
-    # 獲取BSP當前使用的頁目錄
+    # 初始化分頁 - 使用與BSP相同的頁目錄
     movl $get_pd, %eax
     call *%eax
+    movl %eax, %cr3
     
-    # 使用相同的頁目錄
-    movl %eax, %esp
-    subl $4, %esp
-    pushl %eax
-    movl $set_pd, %eax
-    call *%eax
+    # 開啟分頁
+    movl %cr0, %eax
+    orl $0x80000000, %eax
+    movl %eax, %cr0
     
     # 設置段寄存器
     movw $0x10, %ax
@@ -30,15 +30,23 @@ ap_entry:
     movw %ax, %gs
     movw %ax, %ss
     
-    # 呼叫C函數初始化AP
+    # 跳轉到高半核
+    pushl $ap_high_entry
+    ret
+
+ap_high_entry:
+    # 通知BSP，AP已就緒
     call smp_ap_ready
     
-    # 不應該返回，但如果返回了，進入無限循環
+    # 啟用中斷
+    sti
+    
+    # 進入空閒循環
 1:  hlt
     jmp 1b
 
 .section .bss
-    # 為AP提供臨時棧空間，每個AP應該在初始化過程中獲取自己的棧
+    # 為AP提供臨時堆疊空間
     .align 16
 ap_stack:
     .space 4096

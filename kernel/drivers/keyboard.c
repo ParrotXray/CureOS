@@ -1,5 +1,5 @@
 #include <arch/x86/interrupts.h>
-#include <system/apic/apic.h>
+#include <hal/apic/apic.h>
 #include <drivers/keyboard.h>
 #include <hal/io.h>
 #include <libc/stdio.h>

@@ -1,10 +1,10 @@
-#include <system/apic/apic.h>
-#include <system/acpi/acpi.h>
+#include <hal/apic/apic.h>
+#include <hal/acpi/acpi.h>
 #include <system/mm/vmm.h>
 #include <system/mm/page.h>
 #include <hal/io.h>
-#include <system/apic/irq_setup.h>
-#include <system/apic/apic_timer.h>
+#include <hal/apic/irq_setup.h>
+#include <hal/apic/apic_timer.h>
 #include <libc/stdio.h>
 
 // 本地APIC映射的虛擬地址
@@ -278,11 +278,24 @@ void io_apic_unmask_irq(uintptr_t io_apic_base, uint8_t irq) {
 }
 
 void apic_send_ipi(uint8_t dest_apic_id, uint32_t delivery_mode, uint8_t vector) {
+    printf("[APIC] Sending IPI: dest=%d, mode=%x, vector=%d\n", 
+           dest_apic_id, delivery_mode, vector);
+           
     // 設置ICR高32位(目標APIC ID)
     apic_write(APIC_ICR_HIGH, ((uint32_t)dest_apic_id) << 24);
     
+    // 清除ICR的Delivery Status位(確保之前的IPI已完成)
+    while (apic_read(APIC_ICR_LOW) & APIC_ICR_STATUS_PENDING) {
+        __asm__ volatile("pause");
+    }
+    
     // 設置ICR低32位(傳遞模式、向量等)
     uint32_t icr_low = vector | delivery_mode | APIC_ICR_LEVEL_ASSERT;
+    if (delivery_mode != APIC_ICR_DELIVERY_INIT && 
+        delivery_mode != APIC_ICR_DELIVERY_STARTUP) {
+        icr_low |= APIC_ICR_TRIGGER_EDGE;
+    }
+    
     apic_write(APIC_ICR_LOW, icr_low);
     
     // 等待IPI發送完成

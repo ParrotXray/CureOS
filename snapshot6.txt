@@ -1,0 +1,25 @@
+[APIC Timeç] Initializing APIC timer...
+[APIC Timer] Calibrating APIC timer using PIT...
+..........
+[APIC Timer] Calibration complete:
+[APIC Timer] APIC ticks: 170001850
+[APIC Timer] TSC ticks: lu
+[APIC Timer] Frequency: 4115283112 Hz
+[APIC Timer] Ticks per ms: 17000185
+[APIC Timer] Setting up APIC timer in periodic mode
+[APIC Timer] APIC timer initialized at 4115.283 MHz
+[IRQ] Enabled IRQ 1 (Keyboard)
+[APIC] APIC initialized successfully
+[KERNEL] Initializing SMP...
+[SMP] Initializing SMP subsystem
+[SMP] Detected 2 CPUs
+[SMP] CPU 0 is BSP (APIC ID: 0)
+[SMP] Starting application processors
+[SMP] Copying boot code to 0x8000
+[SMP] AP entry point: virt=0xc0106248, phys=0x106248
+[SMP] Starting CPU 1 (APIC ID: 1)...
+[APIC] Sending IPI: dest=1, mode=500, vector=0
+[APIC] Sending IPI: dest=1, mode=600, vector=8
+[APIC] Sending IPI: dest=1, mode=600, vector=8
+[SMP] Waiting for CPU 1 to respond...
+......

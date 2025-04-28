@@ -30,7 +30,17 @@ void set_pd(ptd_t* pd) {
 }
 
 void vmm_init() {
-    // TODO: something here?
+    // 確保所有處理器可以看到相同的頁表
+    // 將頁目錄映射到所有處理器都可以訪問的地址
+    
+    // 從kernel/asm/x86/hhk.c中獲取的頁表初始化代碼已經包含了
+    // 最後一個頁目錄條目的自映射，這很好。
+    // 只需要確保0x8000的AP啟動區域被妥善映射
+    
+    // 映射AP啟動區域
+    for (uintptr_t addr = 0x8000; addr < 0x9000; addr += 0x1000) {
+        vmm_map_page((void*)addr, (void*)addr, PG_PREM_RW, PG_PREM_RW);
+    }
 }
 
 ptd_t* vmm_init_pd() {

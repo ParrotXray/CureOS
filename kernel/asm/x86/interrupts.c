@@ -1,5 +1,5 @@
 #include <arch/x86/interrupts.h>
-#include <system/apic/apic.h>
+#include <hal/apic/apic.h>
 #include <libc/stdio.h>
 
 // 前向宣告

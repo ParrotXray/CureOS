@@ -1,5 +1,5 @@
-#include <system/acpi/acpi.h>
-#include <system/apic/apic.h>
+#include <hal/acpi/acpi.h>
+#include <hal/apic/apic.h>
 #include <system/mm/vmm.h>
 #include <system/mm/page.h>
 #include <libc/stdio.h>
@@ -32,26 +32,22 @@ static volatile int ap_ready_count = 0;
 // 引導處理器初始化各應用處理器的入口點
 extern void ap_entry();
 
-// 啟動代碼模板
-static unsigned char ap_boot_code[] = {
-    0xFA,               // cli
-    0x8C, 0xC8,         // mov ax, cs
+// 啟動代碼模板 (更加簡化明確的版本)
+static uint8_t ap_boot_code[] = {
+    0xFA,               // cli - 禁用中斷
+    
+    // 設置段寄存器為相同的值
+    0xB8, 0x00, 0x00,   // mov ax, 0  
     0x8E, 0xD8,         // mov ds, ax
     0x8E, 0xC0,         // mov es, ax
     0x8E, 0xD0,         // mov ss, ax
     
-    // 設置棧指針
+    // 設置堆疊指針
     0xBC, 0x00, 0x80, 0x00, 0x00,  // mov esp, 0x8000
     
-    // 開啟分頁
-    0x0F, 0x20, 0xC0,   // mov eax, cr0
-    0x0D, 0x00, 0x00, 0x00, 0x80,  // or eax, 0x80000000
-    0x0F, 0x22, 0xC0,   // mov cr0, eax
-    
-    // 跳轉到高半核
-    0xEA,               // jmp far
-    0x00, 0x00, 0x00, 0xC0,  // 目標地址 (將被替換)
-    0x08, 0x00          // 代碼段選擇子 0x08
+    // 直接跳到AP入口點
+    0xB8, 0x00, 0x00, 0x00, 0x00,  // mov eax, 0x00000000 (將被替換為ap_entry的物理地址)
+    0xFF, 0xE0,                    // jmp eax
 };
 
 /**
@@ -118,13 +114,20 @@ int smp_start_aps() {
         return 0;
     }
     
-    // 準備AP啟動代碼
-    // 1. 複製啟動代碼到低地址
-    memcpy((void*)P2V(AP_BOOT_ADDR), ap_boot_code, sizeof(ap_boot_code));
+    // 確保AP啟動代碼的物理地址被正確映射
+    // 首先確保0x8000位址可訪問
+    for (uintptr_t addr = 0x8000; addr < 0x9000; addr += 0x1000) {
+        vmm_map_page((void*)addr, (void*)addr, PG_PREM_RW, PG_PREM_RW);
+    }
     
-    // 2. 填寫跳轉地址 (ap_entry的虛擬地址轉換為物理地址)
+    // 準備AP啟動代碼
+    printf("[SMP] Copying boot code to 0x8000\n");
+    memcpy((void*)AP_BOOT_ADDR, ap_boot_code, sizeof(ap_boot_code));
+    
+    // 填寫跳轉地址 (ap_entry的物理地址)
     uintptr_t ap_entry_phys = V2P(ap_entry);
-    *((uint32_t*)(P2V(AP_BOOT_ADDR) + 19)) = ap_entry_phys;
+    printf("[SMP] AP entry point: virt=0x%x, phys=0x%x\n", ap_entry, ap_entry_phys);
+    *((uint32_t*)(AP_BOOT_ADDR + 19)) = ap_entry_phys;
     
     // 重置計數器
     ap_ready_count = 0;
@@ -138,26 +141,47 @@ int smp_start_aps() {
         // 發送INIT IPI
         apic_send_ipi(cpu_infos[i].apic_id, APIC_ICR_DELIVERY_INIT, 0);
         
-        // 延遲
-        for (volatile int j = 0; j < 10000000; j++);
+        // 必須延遲至少10毫秒 (根據Intel手冊)
+        for (volatile int j = 0; j < 20000000; j++);
         
-        // 發送STARTUP IPI (兩次，根據Intel文檔建議)
+        // 發送STARTUP IPI (兩次，根據Intel手冊建議)
         apic_send_ipi(cpu_infos[i].apic_id, APIC_ICR_DELIVERY_STARTUP, AP_BOOT_ADDR >> 12);
         
-        // 延遲
-        for (volatile int j = 0; j < 1000000; j++);
+        // 延遲200微秒
+        for (volatile int j = 0; j < 2000000; j++);
         
         // 第二次STARTUP IPI
         apic_send_ipi(cpu_infos[i].apic_id, APIC_ICR_DELIVERY_STARTUP, AP_BOOT_ADDR >> 12);
         
         // 等待AP準備好
-        volatile int timeout = 100000000;
+        printf("[SMP] Waiting for CPU %d to respond...\n", i);
+        volatile int timeout = 10000000;  // 更合理的超時值
+        int dots_printed = 0;
+        
         while (ap_ready_count <= i - 1 && timeout-- > 0) {
             __asm__ volatile("pause");
+            
+            // 每隔一段時間顯示進度點，而不是打印大量日誌
+            if (timeout % 1000000 == 0) {
+                printf(".");
+                dots_printed++;
+                if (dots_printed >= 50) {
+                    printf("\n");
+                    dots_printed = 0;
+                }
+            }
+        }
+        
+        if (dots_printed > 0) {
+            printf("\n");
         }
         
         if (timeout <= 0) {
             printf("[SMP] Timeout waiting for CPU %d\n", i);
+            
+            // 在超時情況下，繼續執行而不是無限等待
+            // 這樣在單CPU系統上或有問題的系統上仍能繼續啟動
+            continue;
         } else {
             printf("[SMP] CPU %d started successfully\n", i);
         }
@@ -166,7 +190,6 @@ int smp_start_aps() {
     printf("[SMP] %d APs started successfully\n", ap_ready_count);
     return (ap_ready_count == cpu_count - 1);
 }
-
 /**
  * @brief 獲取當前CPU的APIC ID
  * 
@@ -230,11 +253,13 @@ void smp_broadcast_ipi(uint8_t vector, int exclude_self) {
  * 在AP的啟動代碼中調用此函數通知BSP
  */
 void smp_ap_ready() {
+    // 獲取當前CPU的APIC ID
+    uint8_t apic_id = apic_get_id() >> 24;
+    
+    printf("[SMP] CPU with APIC ID %d is ready\n", apic_id);
+    
     // 增加準備好的AP計數
     __sync_fetch_and_add(&ap_ready_count, 1);
-    
-    // 執行AP特定的初始化
-    // ...
     
     // AP進入空閒循環，等待進一步指令
     while (1) {
