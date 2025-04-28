@@ -195,7 +195,7 @@ static void handle_irq(isr_param* param) {
     if (irq_handlers[irq_num]) {
         irq_handlers[irq_num](param);
     } else {
-        printf("Unhandled IRQ %d\n", irq_num);
+        printf("[INT] Unhandled IRQ %d\n", irq_num);
     }
     
     // 發送 EOI 信號
@@ -216,17 +216,20 @@ static void handle_irq(isr_param* param) {
 // 系統呼叫處理函數
 static void handle_syscall(isr_param* param) {
     // 這裡實現系統呼叫處理邏輯
-    printf("System call not implemented yet\n");
+    printf("[INT] System call not implemented yet\n");
 }
 
 // APIC 計時器中斷處理函數
 static void handle_apic_timer(isr_param* param) {
+    // 增加中斷計數
     timer_ticks++;
-    if (timer_frequency && (timer_ticks % timer_frequency == 0))
-    {
-        uint32_t s = timer_ticks / timer_frequency;
-        printf("APIC Uptime: %u seconds\n", s);
+    
+    // 每秒輸出一次診斷信息
+    if (timer_ticks % 1000 == 0) {
+        printf("[INT] APIC Timer Uptime: %u seconds\n", timer_ticks / 1000);
     }
+    
+    // 發送EOI
     apic_send_eoi();
 }
 
@@ -234,7 +237,7 @@ static void handle_apic_timer(isr_param* param) {
 static void handle_apic_error(isr_param* param) {
     // 讀取 APIC 錯誤狀態寄存器
     uint32_t esr = apic_read(APIC_ESR);
-    printf("APIC Error: 0x%x\n", esr);
+    printf("[INT] APIC Error: 0x%x\n", esr);
     
     // 清除錯誤狀態
     apic_write(APIC_ESR, 0);
@@ -245,7 +248,7 @@ static void handle_apic_error(isr_param* param) {
 
 // APIC 虛假中斷處理函數
 static void handle_apic_spurious(isr_param* param) {
-    printf("APIC Spurious Interrupt\n");
+    printf("[INT] APIC Spurious Interrupt\n");
     // 對於虛假中斷，不需要發送 EOI
 }
 

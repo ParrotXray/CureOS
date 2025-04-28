@@ -193,16 +193,21 @@ void apic_send_eoi() {
     apic_write(APIC_EOI, 0);
 }
 
+// 修改計時器設置函數 - 確保它使用正確的頻率
 void apic_configure_timer(uint8_t vector, uint32_t mode, uint32_t initial_count) {
-    // 設置分頻係數為1
-    apic_write(APIC_TIMER_DIVIDE_CONFIG, 0xB);
+    // 通常分頻為1 (值為0xB)
+    apic_write(APIC_TIMER_DIVIDE_CONFIG, 0x3);  // 除數為16，提高穩定性
     
-    // 配置LVT Timer項
+    // 設置LVT Timer項
     apic_write(APIC_LVT_TIMER, vector | mode);
+    
+    // 記錄設置的初始計數值
+    printf("[APIC Timer] Configure with initial count: %u\n", initial_count);
     
     // 設置初始計數值
     apic_write(APIC_TIMER_INITIAL_COUNT, initial_count);
 }
+
 
 void apic_stop_timer() {
     // 停止定時器 (設置掩碼位)

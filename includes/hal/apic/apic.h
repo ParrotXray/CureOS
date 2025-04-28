@@ -103,6 +103,11 @@
 #define IOAPIC_REDTBL_DELMOD_INIT 0x500 // INIT傳遞模式
 #define IOAPIC_REDTBL_DELMOD_EXTINT 0x700 // ExtINT傳遞模式
 
+#define PIT_FREQ            1193182     // PIT頻率
+#define PIT_MS_COUNT        1193        // 大約1ms的PIT計數值
+#define PIT_CALIBRATION_MS  10          // 校準時間(毫秒)
+#define PIT_CALIBRATION_COUNT (PIT_MS_COUNT * PIT_CALIBRATION_MS) // 校準計數
+
 /**
  * @brief 初始化APIC子系統
  * 

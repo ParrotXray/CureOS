@@ -1,11 +1,5 @@
-Total over—ead bytes: 0
-Total heap size: 4218860
-Free heap size: 0
-Heap utilization: 100%
-==============================
-=== Memory Leak Report ===
-No memory leaks detected.
-
+          ÿ
+[KERNEL] Memory management tests completed successfully
 [KERNEL] Memory management tests completed successfully
 
 [KERNEL] ACPI/APIC Test:
@@ -17,9 +11,15 @@ No memory leaks detected.
 [KERNEL] CPU 0: APIC ID = 0, BSP
 [KERNEL] CPU 1: APIC ID = 1, AP
 [KERNEL] Testing IPI broadcast...
+[KERNEL] Testing IPI broadcast...
 [KERNEL] Testing APIC Timer...
 [KERNEL] Sleeping for 1 second...
-[KERNEL] Wake up! System uptime: 20 ms
+[KERNEL] Sleeping for 1 second...
+[APIC Timer] Uptime: 1 seconds
 
+[KERNEL] System initia
 [KERNEL] System initialization complete. Entering idle state.
+ age Fault Exception (#PF) at EIP: 0xc010aad4
+Fault Address: 0xafbfebdc, Error Code: 0x0
+Error details: Non-present Page, Read, Supervisor Mode
 
