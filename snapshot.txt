@@ -1,25 +1,25 @@
-          ÿ
-[KERNEL] Memory management tests completed successfully
-[KERNEL] Memory management tests completed successfully
-
-[KERNEL] ACPI/APIC Test:
-[KERNEL] System has 2 CPUs
-[KERNEL] CPU 0: APIC ID = 0
-[KERNEL] CPU 1: APIC ID = 1
-[KERNEL] Current CPU APIC ID: 0
-[KERNEL] This is a multi-core system. BSP is running.
-[KERNEL] CPU 0: APIC ID = 0, BSP
-[KERNEL] CPU 1: APIC ID = 1, AP
-[KERNEL] Testing IPI broadcast...
+[KERNEL] CPU 1: APIC ID = 1, A¯
+[KERNEL] CPU 2: APIC ID = 2, AP
+[KERNEL] CPU 3: APIC ID = 3, AP
 [KERNEL] Testing IPI broadcast...
 [KERNEL] Testing APIC Timer...
 [KERNEL] Sleeping for 1 second...
-[KERNEL] Sleeping for 1 second...
-[APIC Timer] Uptime: 1 seconds
+[APIC Timer] Sleeping for 1000 ms (from tick 1 to 1001)...
+[INT] APIC Timer Uptime: 1 seconds
+[APIC Timer] Sleep complete, actual ticks passed: 1000
+[KERNEL] Wake up! System uptime: 1001 ms
+[RTC] Raw values - Seconds: 0xf, Minutes: 0x3b, Hours: 0xf
+[RTC] Raw values - Day: 0x1d, Month: 0x4, Year: 0x19, Format: 0x6
+[RTC] Converted - Seconds: 15, Minutes: 59, Hours: 15
+[RTC] Converted - Day: 29, Month: 4, Year: 25
 
-[KERNEL] System initia
+[KERNEL] System time: 15:59:15 29/4/2025
+[RTC] Raw values - Seconds: 0xf, Minutes: 0x3b, Hours: 0xf
+[RTC] Raw values - Day: 0x1d, Month: 0x4, Year: 0x19, Format: 0x6
+[RTC] Converted - Seconds: 15, Minutes: 59, Hours: 15
+[RTC] Converted - Day: 29, Month: 4, Year: 25
+[KERNEL] Unix timestamp: 1745942355
+
 [KERNEL] System initialization complete. Entering idle state.
- age Fault Exception (#PF) at EIP: 0xc010aad4
-Fault Address: 0xafbfebdc, Error Code: 0x0
-Error details: Non-present Page, Read, Supervisor Mode
+[INT] APIC Timer Uptime: 2 seconds
 

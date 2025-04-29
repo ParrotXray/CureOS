@@ -143,6 +143,9 @@ end:
 // 初始化鍵盤
 void keyboard_init() {
     printf("[Keyboard] Initializing keyboard\n");
+    // 啟用特定IRQ
+    // 鍵盤IRQ
+    enable_irq(1);
     
     // 讀取鍵盤控制器配置
     io_port_wb(KB_COMMAND_PORT, KB_COMMAND_READ_CONFIG);

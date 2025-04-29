@@ -18,6 +18,7 @@
 #include <drivers/keyboard.h>
 
 #include <hal/cpu.h>
+#include <hal/rtc.h>
 
 #include <arch/x86/boot/multiboot.h>
 #include <arch/x86/gdt.h>
@@ -26,6 +27,8 @@
 #include <libc/stdio.h>
 #include <libc/stdlib.h>
 #include <libc/string.h>
+
+#define BreakPoints for (int32_t i = 0; i < 100000000000; i++);
 
 // 使用數組格式聲明標籤，這樣它們就是有效的指針而不是 void 類型
 extern char __kernel_start[];
@@ -190,9 +193,8 @@ _kernel_main()
     
     // 初始化鍵盤驅動程式
     keyboard_init();
-    
-    cpu_get_brand(buf);
-    printf("CPU: %s\n\n", buf);
+
+    rtc_init();
 
     uintptr_t k_start = vmm_v2p(__kernel_start);  // 移除了&操作符
     printf("The kernel's base address mapping: %p->%p\n", __kernel_start, (void*)k_start);
@@ -419,6 +421,22 @@ _kernel_main()
         apic_timer_sleep(1000); // 睡眠 1 秒
         printf("[KERNEL] Wake up! System uptime: %d ms\n", apic_timer_get_ms());
     }
+
+    // 獲取當前時間
+    rtc_datetime_t current_time;
+    rtc_get_datetime(&current_time);
+
+    // 使用 sprintf 避免格式問題
+    char time_str[32];
+    sprintf(time_str, "%u:%u:%u %u/%u/%u", 
+        current_time.hour, current_time.minute, current_time.second,
+        current_time.day, current_time.month, current_time.year);
+    printf("\n[KERNEL] System time: %s\n", time_str);
+
+    // 獲取並顯示時間戳
+    uint32_t timestamp = rtc_get_timestamp();
+    printf("[KERNEL] Unix timestamp: %u\n", timestamp);
+
     
     printf("\n[KERNEL] System initialization complete. Entering idle state.\n");
 

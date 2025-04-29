@@ -169,10 +169,6 @@ int apic_init() {
     // 初始化APIC計時器
     apic_timer_init();
     
-    // 啟用特定IRQ
-    // 鍵盤IRQ
-    enable_irq(1);
-    
     printf("[APIC] APIC initialized successfully\n");
     return 1;
 }
