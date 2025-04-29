@@ -1,5 +1,5 @@
-#ifndef _LUNAIX_APIC_H
-#define _LUNAIX_APIC_H
+#ifndef _SYSTEM_APIC_H
+#define _SYSTEM_APIC_H
 
 #include <stdint.h>
 
@@ -262,4 +262,4 @@ void apic_configure_lint(int lint, uint8_t vector, uint32_t delivery_mode, int m
  */
 uintptr_t apic_get_io_apic_base(void);
 
-#endif /* _LUNAIX_APIC_H */
+#endif /* _SYSTEM_APIC_H */

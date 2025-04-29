@@ -1,5 +1,5 @@
-#ifndef _LUNAIX_SMP_H
-#define _LUNAIX_SMP_H
+#ifndef _SYSTEM_SMP_H
+#define _SYSTEM_SMP_H
 
 #include <stdint.h>
 
@@ -73,4 +73,4 @@ void smp_broadcast_ipi(uint8_t vector, int exclude_self);
  */
 void smp_ap_ready();
 
-#endif /* _LUNAIX_SMP_H */
+#endif /* _SYSTEM_SMP_H */

@@ -1,5 +1,5 @@
-#ifndef _LUNAIX_IRQ_SETUP_H
-#define _LUNAIX_IRQ_SETUP_H
+#ifndef _SYSTEM_IRQ_SETUP_H
+#define _SYSTEM_IRQ_SETUP_H
 
 #include <stdint.h>
 
@@ -24,4 +24,4 @@ void enable_irq(uint8_t irq);
  */
 void disable_irq(uint8_t irq);
 
-#endif /* _LUNAIX_IRQ_SETUP_H */
+#endif /* _SYSTEM_IRQ_SETUP_H */

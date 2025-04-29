@@ -1,5 +1,5 @@
-#ifndef _LUNAIX_IO_H
-#define _LUNAIX_IO_H
+#ifndef _SYSTEM_IO_H
+#define _SYSTEM_IO_H
 
 #include <stdint.h>
 
@@ -35,4 +35,4 @@ uint8_t io_port_rb(uint8_t port);
  */
 uint32_t io_port_rl(uint8_t port);
 
-#endif /* _LUNAIX_IO_H */
+#endif /* _SYSTEM_IO_H */

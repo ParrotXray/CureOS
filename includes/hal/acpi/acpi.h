@@ -1,5 +1,5 @@
-#ifndef _LUNAIX_ACPI_H
-#define _LUNAIX_ACPI_H
+#ifndef _SYSTEM_ACPI_H
+#define _SYSTEM_ACPI_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -161,4 +161,4 @@ int acpi_get_cpu_count();
  */
 int acpi_get_cpu_apic_id(int index);
 
-#endif /* _LUNAIX_ACPI_H */
+#endif /* _SYSTEM_ACPI_H */

@@ -1,5 +1,5 @@
-#ifndef _LUNAIX_CPU_H
-#define _LUNAIX_CPU_H
+#ifndef _SYSTEM_CPU_H
+#define _SYSTEM_CPU_H
 
 #include <stdint.h>
 
@@ -83,4 +83,4 @@ static inline void cpu_disable_interrupts() {
     __asm__ volatile("cli");
 }
 
-#endif /* _LUNAIX_CPU_H */
+#endif /* _SYSTEM_CPU_H */

@@ -1,5 +1,5 @@
-#ifndef _LUNAIX_INTERRUPTS_H
-#define _LUNAIX_INTERRUPTS_H
+#ifndef _SYSTEM_INTERRUPTS_H
+#define _SYSTEM_INTERRUPTS_H
 
 #include <stdint.h>
 
@@ -96,4 +96,4 @@ int register_irq_handler(int irq, irq_handler_t handler);
  */
 int unregister_irq_handler(int irq);
 
-#endif /* _LUNAIX_INTERRUPTS_H */
+#endif /* _SYSTEM_INTERRUPTS_H */

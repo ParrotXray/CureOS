@@ -1,5 +1,5 @@
-#ifndef _LUNAIX_STDLIB_H
-#define _LUNAIX_STDLIB_H
+#ifndef _SYSTEM_STDLIB_H
+#define _SYSTEM_STDLIB_H
 
 #include <stddef.h>  // 添加這一行以定義 size_t 類型
 
@@ -41,4 +41,4 @@ void* realloc(void* ptr, size_t size);
  */
 void* calloc(size_t nmemb, size_t size);
 
-#endif /* _LUNAIX_STDLIB_H */
+#endif /* _SYSTEM_STDLIB_H */

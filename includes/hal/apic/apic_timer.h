@@ -1,5 +1,5 @@
-#ifndef _LUNAIX_APIC_TIMER_H
-#define _LUNAIX_APIC_TIMER_H
+#ifndef _SYSTEM_APIC_TIMER_H
+#define _SYSTEM_APIC_TIMER_H
 
 #include <stdint.h>
 
@@ -53,4 +53,4 @@ uint32_t apic_timer_get_current_count();
 void apic_timer_set_frequency(uint32_t hz);
 
 
-#endif /* _LUNAIX_APIC_TIMER_H */
+#endif /* _SYSTEM_APIC_TIMER_H */
