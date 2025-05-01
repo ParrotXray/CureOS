@@ -41,14 +41,14 @@ rtc_init() {
     // 啟用周期性中斷 (PIE=1)
     regB |= 0x40;
     
-    printf("[RTC] Setting REG_B to 0x%02x\n", regB);
+    // printf("[RTC] Setting REG_B to 0x%02x\n", regB);
     
     // 寫回寄存器 B
     rtc_write_reg(RTC_REG_B | WITH_NMI_DISABLED, regB);
 
     // 檢查設置是否成功
     regB = rtc_read_reg(RTC_REG_B | WITH_NMI_DISABLED);
-    printf("[RTC] REG_B after write: 0x%02x\n", regB);
+    // printf("[RTC] REG_B after write: 0x%02x\n", regB);
 
     // 註冊 IRQ 處理程序
     register_irq_handler(RTC_IRQ, rtc_irq_handler);
@@ -157,10 +157,10 @@ void rtc_get_datetime(rtc_datetime_t* datetime) {
     uint8_t weekday = rtc_read_reg(RTC_REG_WDY | WITH_NMI_DISABLED);
     
     // 輸出原始值
-    printf("[RTC] Raw values - Seconds: 0x%x, Minutes: 0x%x, Hours: 0x%x\n", 
-           seconds, minutes, hours);
-    printf("[RTC] Raw values - Day: 0x%x, Month: 0x%x, Year: 0x%x, Format: 0x%x\n",
-           day, month, year, regB);
+    // printf("[RTC] Raw values - Seconds: 0x%x, Minutes: 0x%x, Hours: 0x%x\n", 
+    //        seconds, minutes, hours);
+    // printf("[RTC] Raw values - Day: 0x%x, Month: 0x%x, Year: 0x%x, Format: 0x%x\n",
+    //        day, month, year, regB);
     
     // 若為 BCD 格式轉為二進制
     if (!(regB & 0x04)) {  // 檢查 DM 位 (Data Mode)
@@ -192,10 +192,10 @@ void rtc_get_datetime(rtc_datetime_t* datetime) {
     }
     
     // 輸出轉換後的值
-    printf("[RTC] Converted - Seconds: %u, Minutes: %u, Hours: %u\n", 
-           seconds, minutes, hours);
-    printf("[RTC] Converted - Day: %u, Month: %u, Year: %u\n",
-           day, month, year);
+    // printf("[RTC] Converted - Seconds: %u, Minutes: %u, Hours: %u\n", 
+    //        seconds, minutes, hours);
+    // printf("[RTC] Converted - Day: %u, Month: %u, Year: %u\n",
+    //        day, month, year);
 }
 
 void rtc_set_datetime(rtc_datetime_t* datetime) {

@@ -138,3 +138,8 @@ void apic_timer_set_frequency(uint32_t hz) {
     printf("[APIC Timer] Timer frequency set to %u Hz (%u ms per interrupt)\n", 
            hz, ms_per_interrupt);
 }
+
+// 用于在中断处理程序中递增计数器
+void apic_timer_tick() {
+    timer_ticks++;
+}

@@ -222,29 +222,18 @@ static void handle_syscall(isr_param* param) {
 
 // APIC 計時器中斷處理函數
 static void handle_apic_timer(isr_param* param) {
-    // 增加中斷計數
-    // char time_str[32];
-    // uint32_t timestamp = rtc_get_timestamp();
-    // rtc_datetime_t current_time;
-    // rtc_get_datetime(&current_time);
-
-    timer_ticks++;
+    // 調用APIC定時器模塊中的計數函數
+    apic_timer_tick();  // 這會增加計數並處理所有定時器相關邏輯
     
     // 每秒輸出一次診斷信息
     if (timer_ticks % 1000 == 0) {
         printf("[INT] APIC Timer Uptime: %u seconds\n", timer_ticks / 1000);
-        // sprintf(time_str, "%u:%u:%u %u/%u/%u", 
-        //     current_time.hour, current_time.minute, current_time.second,
-        //     current_time.day, current_time.month, current_time.year);
-        // printf("\n[KERNEL] System time: %s\n", time_str);
-
-        // uint32_t timestamp = rtc_get_timestamp();
-        // printf("[KERNEL] Unix timestamp: %u\n", timestamp);    
     }
     
     // 發送EOI
     apic_send_eoi();
 }
+
 
 // APIC 錯誤中斷處理函數
 static void handle_apic_error(isr_param* param) {

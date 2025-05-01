@@ -12,7 +12,6 @@
 
 #include <hal/acpi/acpi.h>
 #include <hal/apic/apic.h>
-#include <hal/acpi/smp.h>
 #include <hal/apic/apic_timer.h>
 #include <hal/apic/irq_setup.h>
 #include <drivers/keyboard.h>
@@ -168,13 +167,6 @@ _kernel_post_init() {
         if (!apic_init()) {
             // 如果 APIC 初始化失敗，可能需要回退到 PIC 模式或處理錯誤
             printf("[KERNEL] Failed to initialize APIC\n");
-        }
-        
-        // 初始化SMP
-        printf("[KERNEL] Initializing SMP...\n");
-        if (smp_init()) {
-            // 啟動應用處理器
-            smp_start_aps();
         }
     } else {
         printf("[KERNEL] ACPI not supported, skipping APIC/SMP initialization\n");
@@ -391,26 +383,6 @@ _kernel_main()
         // 顯示本地APIC信息
         uint32_t lapic_id = apic_get_id();
         printf("[KERNEL] Current CPU APIC ID: %d\n", lapic_id >> 24);
-        
-        // 如果多核測試
-        if (smp_get_cpu_count() > 1) {
-            printf("[KERNEL] This is a multi-core system. BSP is running.\n");
-            
-            // 獲取所有CPU信息
-            for (int i = 0; i < smp_get_cpu_count(); i++) {
-                cpu_info_t* info = smp_get_cpu_info(i);
-                if (info && info->present) {
-                    printf("[KERNEL] CPU %d: APIC ID = %d, %s\n", 
-                           i, info->apic_id, 
-                           info->is_bsp ? "BSP" : "AP");
-                }
-            }
-            
-            // 測試處理器間中斷
-            printf("[KERNEL] Testing IPI broadcast...\n");
-            // 發送測試IPI（實際上這可能不會有可見效果，因為我們還沒有為AP設置IPI處理程序）
-            smp_broadcast_ipi(0x41, 1); // 向量0x41，排除自己
-        }
         
         // 測試APIC計時器
         printf("[KERNEL] Testing APIC Timer...\n");
