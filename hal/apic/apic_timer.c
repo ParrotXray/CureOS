@@ -1,6 +1,7 @@
 #include <hal/apic/apic.h>
 #include <hal/acpi/acpi.h>
 #include <hal/apic/apic_timer.h>
+#include <hal/apic/lapic.h>
 #include <arch/x86/interrupts.h>
 #include <libc/stdio.h>
 #include <hal/cpu.h>
@@ -20,9 +21,9 @@ void apic_timer_calibrate() {
     io_port_wb(PIT_CHANNEL0, 0x2E);  // 高位元組 (11932 >> 8)
     
     // 設置 APIC 計時器為單次計數模式
-    apic_write(APIC_TIMER_DIVIDE_CONFIG, 0xB);  // 除數為 1
-    apic_write(APIC_LVT_TIMER, APIC_LVT_MASKED);  // 掩蔽計時器
-    apic_write(APIC_TIMER_INITIAL_COUNT, 0xFFFFFFFF);  // 初始計數最大值
+    apic_write(LAPIC_TIMER_DIVIDE_CONFIG, 0xB);  // 除數為 1
+    apic_write(LAPIC_LVT_TIMER, LAPIC_LVT_MASKED);  // 掩蔽計時器
+    apic_write(LAPIC_TIMER_INITIAL_COUNT, 0xFFFFFFFF);  // 初始計數最大值
     
     // 使用 PIT 計時，等待 100ms (10 次 PIT 中斷)
     // 讀取 PIT 通道 0 的計數值 (注意：PIT 是遞減計數器)
@@ -54,10 +55,10 @@ void apic_timer_calibrate() {
     printf("\n");
     
     // 停止 APIC 計時器
-    apic_write(APIC_LVT_TIMER, APIC_LVT_MASKED);
+    lapic_write(LAPIC_LVT_TIMER, LAPIC_LVT_MASKED);
     
     // 讀取剩餘計數
-    uint32_t apic_ticks = 0xFFFFFFFF - apic_read(APIC_TIMER_CURRENT_COUNT);
+    uint32_t apic_ticks = 0xFFFFFFFF - lapic_read(LAPIC_TIMER_CURRENT_COUNT);
     
     // 計算 APIC 計時器頻率 (100ms = CALIBRATION_CYCLES * 10ms)
     ticks_per_ms = apic_ticks / (CALIBRATION_CYCLES * 10);
@@ -90,7 +91,7 @@ void apic_timer_init() {
     
     // 設置計時器使用週期模式，每毫秒觸發一次中斷
     printf("[APIC Timer] Setting up APIC timer in periodic mode\n");
-    apic_configure_timer(APIC_TIMER_VECTOR, APIC_TIMER_PERIODIC, ticks_per_ms);
+    apic_configure_timer(APIC_TIMER_VECTOR, LAPIC_TIMER_PERIODIC, ticks_per_ms);
     
     printf("[APIC Timer] APIC timer initialized at %u.%u MHz\n", 
            timer_frequency / 1000000, (timer_frequency % 1000000) / 1000);
@@ -123,7 +124,7 @@ void apic_timer_sleep(uint32_t ms) {
 
 // 獲取當前計時器計數值
 uint32_t apic_timer_get_current_count() {
-    return apic_read(APIC_TIMER_CURRENT_COUNT);
+    return lapic_read(LAPIC_TIMER_CURRENT_COUNT);
 }
 
 // 設置計時器的中斷頻率
@@ -133,7 +134,7 @@ void apic_timer_set_frequency(uint32_t hz) {
     uint32_t ms_per_interrupt = 1000 / hz;
     uint32_t ticks = ticks_per_ms * ms_per_interrupt;
     
-    apic_configure_timer(APIC_TIMER_VECTOR, APIC_TIMER_PERIODIC, ticks);
+    apic_configure_timer(APIC_TIMER_VECTOR, LAPIC_TIMER_PERIODIC, ticks);
     
     printf("[APIC Timer] Timer frequency set to %u Hz (%u ms per interrupt)\n", 
            hz, ms_per_interrupt);

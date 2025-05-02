@@ -1,25 +1,25 @@
-[KERNEL] CPU 1: APIC ID = 1, A¯
-[KERNEL] CPU 2: APIC ID = 2, AP
-[KERNEL] CPU 3: APIC ID = 3, AP
-[KERNEL] Testing IPI broadcast...
-[KERNEL] Testing APIC Timer...
-[KERNEL] Sleeping for 1 second...
-[APIC Timer] Sleeping for 1000 ms (from tick 1 to 1001)...
-[INT] APIC Timer Uptime: 1 seconds
-[APIC Timer] Sleep complete, actual ticks passed: 1000
-[KERNEL] Wake up! System uptime: 1001 ms
-[RTC] Raw values - Seconds: 0xf, Minutes: 0x3b, Hours: 0xf
-[RTC] Raw values - Day: 0x1d, Month: 0x4, Year: 0x19, Format: 0x6
-[RTC] Converted - Seconds: 15, Minutes: 59, Hours: 15
-[RTC] Converted - Day: 29, Month: 4, Year: 25
+ºRROR: Block 4 at 0xc0538034 is not contiguous with next block at 0xc053804c
+[HEAP] Found 2 errors in heap integrity!
+[HEAP] All memory freed
+[HEAP] Free memory after freeing: 0 bytes
 
-[KERNEL] System time: 15:59:15 29/4/2025
-[RTC] Raw values - Seconds: 0xf, Minutes: 0x3b, Hours: 0xf
-[RTC] Raw values - Day: 0x1d, Month: 0x4, Year: 0x19, Format: 0x6
-[RTC] Converted - Seconds: 15, Minutes: 59, Hours: 15
-[RTC] Converted - Day: 29, Month: 4, Year: 25
-[KERNEL] Unix timestamp: 1745942355
+[MEMPOOL] Testing memory pool
+[MEMPOOL] Memory pool created successfully
+[MEMPOOL] Initial stats: total=100, free=100, usage=0%
+[MEMPOOL] After allocation: total=100, free=50, usage=50%
+[MEMPOOL] Block 0 content: Block 0
+[MEMPOOL] Block 1 content: Block 1
+[MEMPOOL] Block 2 content: Block 2
+[MEMPOOL] Block 3 content: Block 3
+[MEMPOOL] Block 4 content: Block 4
+[MEMPOOL] After partial free: total=100, free=75, usage=25%
+[MEMPOOL] Pool expanded successfully
+[MEMPOOL] After expansion: total=150, free=125, usage=16%
+[MEMPOOL] Final stats: total=150, free=150, usage=0%
+[MEMPOOL] Memory pool destroyed
 
-[KERNEL] System initialization complete. Entering idle state.
-[INT] APIC Timer Uptime: 2 seconds
+[HEAP] Testing allocation performance
+[HEAP] Allocated 1000 small blocks, memory used: -16 bytes
+[HEAP] After freeing all blocks, recovered: -16 bytes
+[HEAP] Memory overhead: 0 bytes
 

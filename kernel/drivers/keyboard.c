@@ -26,10 +26,12 @@
 #define KEY_LSHIFT    0x2A
 #define KEY_RSHIFT    0x36
 #define KEY_LCTRL     0x1D
-#define KEY_RCTRL     0x1D // 特殊前綴
+#define KEY_RCTRL     0x1D  // 特殊前綴
 #define KEY_LALT      0x38
-#define KEY_RALT      0x38 // 特殊前綴
+#define KEY_RALT      0x38  // 特殊前綴
 #define KEY_CAPS_LOCK 0x3A
+#define KEY_NUM_LOCK  0x45
+#define KEY_SCROLL_LOCK 0x46
 
 // 按鍵修飾符狀態
 static struct {
@@ -39,7 +41,7 @@ static struct {
     uint8_t caps_lock : 1;
     uint8_t num_lock : 1;
     uint8_t scroll_lock : 1;
-    uint8_t special : 1; // 處理特殊鍵的前綴
+    uint8_t special : 1;  // 處理特殊鍵的前綴
 } key_state = {0};
 
 // 標準US布局鍵盤映射表
@@ -60,6 +62,25 @@ static const char keymap_us_shift[128] = {
     0, '|', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?', 0,
     '*', 0, ' ', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     '-', 0, 0, 0, '+', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
+// 數字鍵盤映射表 - 直接使用掃描碼作為索引
+static const char keypad_map[128] = {
+    [0x47] = '7',  // Keypad 7
+    [0x48] = '8',  // Keypad 8
+    [0x49] = '9',  // Keypad 9
+    [0x4A] = '-',  // Keypad -
+    [0x4B] = '4',  // Keypad 4
+    [0x4C] = '5',  // Keypad 5
+    [0x4D] = '6',  // Keypad 6
+    [0x4E] = '+',  // Keypad +
+    [0x4F] = '1',  // Keypad 1
+    [0x50] = '2',  // Keypad 2
+    [0x51] = '3',  // Keypad 3
+    [0x52] = '0',  // Keypad 0
+    [0x53] = '.',  // Keypad .
+    [0x35] = '/',  // Keypad /
+    [0x37] = '*',  // Keypad *
 };
 
 // 鍵盤中斷處理程序
@@ -86,6 +107,8 @@ static void keyboard_handler(isr_param* param) {
             key_state.ctrl = !released;
         } else if (scancode == KEY_RALT) {
             key_state.alt = !released;
+        } else if (scancode == 0x1C && !released) {  // 數字鍵盤 Enter
+            printf("\n");
         }
         
         goto end;
@@ -99,33 +122,53 @@ static void keyboard_handler(isr_param* param) {
     } else if (scancode == KEY_LALT) {
         key_state.alt = !released;
     } else if (scancode == KEY_CAPS_LOCK && !released) {
-        // 切換Caps Lock狀態
+        // 切換 Caps Lock 狀態
         key_state.caps_lock = !key_state.caps_lock;
         printf("[Keyboard] Caps Lock: %s\n", key_state.caps_lock ? "ON" : "OFF");
-    } else if (!released && scancode < 128) {
-        // 處理一般按鍵
-        char c;
+    } else if (scancode == KEY_NUM_LOCK && !released) {
+        // 切換 Num Lock 狀態
+        key_state.num_lock = !key_state.num_lock;
+        printf("[Keyboard] Num Lock: %s\n", key_state.num_lock ? "ON" : "OFF");
+    } else if (scancode == KEY_SCROLL_LOCK && !released) {
+        // 切換 Scroll Lock 狀態
+        key_state.scroll_lock = !key_state.scroll_lock;
+        printf("[Keyboard] Scroll Lock: %s\n", key_state.scroll_lock ? "ON" : "OFF");
+    } else if (!released) {
+        char c = 0;
         
-        // 根據修飾鍵狀態選擇映射表
-        if (key_state.shift) {
-            c = keymap_us_shift[scancode];
-        } else {
-            c = keymap_us[scancode];
+        // 處理數字鍵盤輸入 (當 Num Lock 開啟時)
+        if (key_state.num_lock && scancode < 128 && keypad_map[scancode] != 0) {
+            c = keypad_map[scancode];
+        } 
+        // 數字鍵盤符號鍵不受 Num Lock 影響
+        else if ((scancode == 0x4A || scancode == 0x4E || scancode == 0x35 || scancode == 0x37) && 
+                 keypad_map[scancode] != 0) {
+            c = keypad_map[scancode];
         }
-        
-        // 處理Caps Lock對字母的影響
-        if (key_state.caps_lock && c >= 'a' && c <= 'z') {
-            c = c - 'a' + 'A';
-        } else if (key_state.caps_lock && c >= 'A' && c <= 'Z') {
-            c = c - 'A' + 'a';
-        }
-        
-        // 控制鍵組合
-        if (key_state.ctrl) {
-            if (c >= 'a' && c <= 'z') {
-                c = c - 'a' + 1; // Ctrl+A -> 1, Ctrl+B -> 2, etc.
-            } else if (c >= 'A' && c <= 'Z') {
-                c = c - 'A' + 1;
+        // 標準按鍵處理
+        else if (scancode < 128 && keymap_us[scancode] != 0) {
+            if (key_state.shift) {
+                c = keymap_us_shift[scancode];
+            } else {
+                c = keymap_us[scancode];
+            }
+            
+            // 處理 Caps Lock 對字母的影響
+            if (key_state.caps_lock) {
+                if (c >= 'a' && c <= 'z') {
+                    c = c - 'a' + 'A';
+                } else if (c >= 'A' && c <= 'Z') {
+                    c = c - 'A' + 'a';
+                }
+            }
+            
+            // 控制鍵組合
+            if (key_state.ctrl) {
+                if (c >= 'a' && c <= 'z') {
+                    c = c - 'a' + 1; // Ctrl+A -> 1, Ctrl+B -> 2, etc.
+                } else if (c >= 'A' && c <= 'Z') {
+                    c = c - 'A' + 1;
+                }
             }
         }
         
@@ -143,8 +186,8 @@ end:
 // 初始化鍵盤
 void keyboard_init() {
     printf("[Keyboard] Initializing keyboard\n");
+    
     // 啟用特定IRQ
-    // 鍵盤IRQ
     enable_irq(1);
     
     // 讀取鍵盤控制器配置
@@ -166,5 +209,8 @@ void keyboard_init() {
     // 註冊中斷處理程序
     register_irq_handler(1, keyboard_handler);
     
-    printf("[Keyboard] Keyboard initialized\n");
+    // 預設啟用 Num Lock
+    key_state.num_lock = 1;
+    
+    printf("[Keyboard] Keyboard initialized with Num Lock enabled\n");
 }

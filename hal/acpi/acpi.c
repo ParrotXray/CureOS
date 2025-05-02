@@ -310,10 +310,20 @@ int acpi_init() {
         printf("[ACPI] Using default Local APIC address: 0x%x\n", local_apic_addr);
         printf("[ACPI] Using default IO APIC address: 0x%x\n", io_apic_addr);
         printf("[ACPI] ACPI initialization complete with default values\n");
+
+        printf("[ACPI] OEM: Unknown (using default values)\n");
+        printf("[ACPI] IOAPIC address: 0x%x\n", io_apic_addr);
+        printf("[ACPI] APIC address: 0x%x\n", local_apic_addr);
+
         return 1;  // 返回成功，使用默认值
     }
     
     printf("[ACPI] Found RSDP at %p, revision %d\n", rsdp, rsdp->revision);
+
+    // 輸出 OEM ID
+    char oem_id[7] = {0};  // 6個字符加一個終止符
+    memcpy(oem_id, rsdp->oem_id, 6);
+    printf("[ACPI] OEM: %s\n", oem_id);
     
     // 根據ACPI版本選擇RSDT或XSDT
     if (rsdp->revision >= 2 && rsdp->xsdt_address) {
@@ -351,7 +361,7 @@ int acpi_init() {
         printf("[ACPI] Mapping RSDT memory...\n");
 
         // 預先映射 RSDT 完整表格
-        uintptr_t rsdt_phys = rsdp->rsdt_address;
+        uintptr_t rsdt_phys = (uintptr_t)rsdp->rsdt_address;
         acpi_rsdt_t* rsdt_tmp = (acpi_rsdt_t*)(uintptr_t)rsdt_phys;
         
         // 注意：rsdt_tmp 這時候直接是物理地址指標，不能直接解dereference
@@ -386,6 +396,8 @@ int acpi_init() {
     
     if (!xsdt && !rsdt) {
         printf("[ACPI] No valid system description table found, using default values\n");
+        printf("[ACPI] IOAPIC address: 0x%x\n", io_apic_addr);
+        printf("[ACPI] APIC address: 0x%x\n", local_apic_addr);
         return 1;  // 使用默认值
     }
     
@@ -395,8 +407,12 @@ int acpi_init() {
     if (madt) {
         printf("[ACPI] Found MADT, parsing APIC information\n");
         acpi_parse_madt();
+        printf("[ACPI] IOAPIC address: 0x%x\n", io_apic_addr);
+        printf("[ACPI] APIC address: 0x%x\n", local_apic_addr);
     } else {
         printf("[ACPI] MADT not found, using default APIC values\n");
+        printf("[ACPI] IOAPIC address: 0x%x\n", io_apic_addr);
+        printf("[ACPI] APIC address: 0x%x\n", local_apic_addr);
         // 已经设置了默认值，不需要重复设置
     }
     

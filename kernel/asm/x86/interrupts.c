@@ -1,4 +1,5 @@
 #include <arch/x86/interrupts.h>
+#include <hal/apic/lapic.h>
 #include <hal/apic/apic.h>
 #include <libc/stdio.h>
 #include <hal/rtc.h>
@@ -238,11 +239,11 @@ static void handle_apic_timer(isr_param* param) {
 // APIC 錯誤中斷處理函數
 static void handle_apic_error(isr_param* param) {
     // 讀取 APIC 錯誤狀態寄存器
-    uint32_t esr = apic_read(APIC_ESR);
+    uint32_t esr = apic_read(LAPIC_ESR);
     printf("[INT] APIC Error: 0x%x\n", esr);
     
     // 清除錯誤狀態
-    apic_write(APIC_ESR, 0);
+    apic_write(LAPIC_ESR, 0);
     
     // 發送 EOI
     apic_send_eoi();

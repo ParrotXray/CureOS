@@ -1,5 +1,7 @@
 #include <hal/apic/apic.h>
 #include <hal/acpi/acpi.h>
+#include <hal/apic/lapic.h>
+#include <hal/apic/ioapic.h>
 #include <hal/apic/irq_setup.h>
 #include <arch/x86/interrupts.h>
 #include <libc/stdio.h>
@@ -128,7 +130,7 @@ void configure_io_apic_irqs() {
     update_irq_config_from_overrides();
 
     // 取得 IO APIC 能處理的最大 redirection entry
-    int max_entry = io_apic_max_redirection_entry(io_apic_base);
+    int max_entry = ioapic_max_redirection_entry();
 
     // 取得本 CPU 的 APIC ID (高 8 位)
     uint8_t dest_apic = (apic_get_id() >> 24) & 0xFF;
@@ -151,8 +153,7 @@ void configure_io_apic_irqs() {
         uint32_t flags = cfg->trigger_mode | cfg->polarity;
         if (cfg->masked) flags |= IOAPIC_REDTBL_MASKED;
 
-        io_apic_setup_redirection(
-            io_apic_base,
+        ioapic_setup_redirection(
             gsi,
             cfg->vector,
             cfg->delivery_mode,
@@ -170,8 +171,7 @@ void configure_io_apic_irqs() {
 }
 
 // 啟用特定 IRQ
-void enable_irq(uint8_t irq)
-{
+void enable_irq(uint8_t irq) {
     if (irq >= 16) return;
 
     uintptr_t io_apic_addr = apic_get_io_apic_base();
@@ -186,7 +186,7 @@ void enable_irq(uint8_t irq)
         }
     }
 
-    io_apic_unmask_irq(io_apic_addr, gsi);
+    ioapic_unmask_irq(gsi);
     isa_irq_config[irq].masked = 0;
 
     printf("[IRQ] Enabled IRQ %d (%s)\n", irq, isa_irq_config[irq].name);
@@ -208,7 +208,7 @@ void disable_irq(uint8_t irq)
         }
     }
 
-    io_apic_mask_irq(io_apic_addr, gsi);
+    ioapic_mask_irq(gsi);
     isa_irq_config[irq].masked = 1;
 
     printf("[IRQ] Disabled IRQ %d (%s)\n", irq, isa_irq_config[irq].name);

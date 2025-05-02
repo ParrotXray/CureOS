@@ -83,24 +83,30 @@ static heap_block_t* extend_heap(heap_t* heap, size_t size) {
 }
 
 static void split_block(heap_block_t* block, size_t size) {
+    // 確保 size 已對齊到 16 位元組邊界
+    size = (size + 15) & ~15;
     
-    // 只有當剩餘空間足夠容納一個新塊頭加上至少1字節數據時才分裂
-    if (block->size > size + sizeof(heap_block_t) + 1) {
+    // 只有當剩餘空間足夠容納一個新塊頭加上至少 16 位元組數據時才分裂
+    if (block->size > size + sizeof(heap_block_t) + 16) {
         
-        // 計算新塊的位置
-        heap_block_t* new_block = (heap_block_t*)((uintptr_t)block + sizeof(heap_block_t) + size);
+        // 計算新塊的位置，確保對齊到 16 位元組邊界
+        uintptr_t new_block_addr = ((uintptr_t)block + sizeof(heap_block_t) + size);
+        // 確保地址對齊 16 位元組
+        new_block_addr = (new_block_addr + 15) & ~15;
+        
+        heap_block_t* new_block = (heap_block_t*)new_block_addr;
+        
+        // 計算實際使用的大小（可能因對齊而增加）
+        size_t actual_size = new_block_addr - (uintptr_t)block - sizeof(heap_block_t);
         
         // 設置新塊屬性
-        new_block->size = block->size - size - sizeof(heap_block_t);
+        new_block->size = block->size - actual_size - sizeof(heap_block_t);
         new_block->is_free = HEAP_BLOCK_FREE;
         new_block->next = block->next;
         
         // 更新當前塊
-        block->size = size;
+        block->size = actual_size;
         block->next = new_block;
-        
-    } else {
-        // printf("[SPLIT-BLOCK-DEBUG] Block not large enough to split, skipping\n");
     }
 }
 
@@ -159,8 +165,8 @@ heap_t* heap_init(uintptr_t start_addr, uintptr_t end_addr, uintptr_t max_addr) 
 }
 
 void* heap_alloc(heap_t* heap, size_t size) {
-    // 對齊到8字節邊界
-    size = (size + 7) & ~7;
+    // 對齊到16字節邊界
+    size = (size + 15) & ~15;
     
     if (size == 0) {
         return NULL;

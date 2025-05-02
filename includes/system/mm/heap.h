@@ -11,12 +11,12 @@
 // 堆標誌
 #define HEAP_AUTO_EXTEND      1   // 是否自動擴展堆
 
-// 堆塊頭結構
+// 堆塊頭結構 (確保 16 位元組對齊)
 typedef struct heap_block {
     uint32_t size;                 // 塊的大小（不包括此頭）
     uint8_t is_free;               // 塊是否空閒
     struct heap_block* next;       // 下一個塊
-} heap_block_t;
+} __attribute__((aligned(16))) heap_block_t;
 
 // 堆結構
 typedef struct {

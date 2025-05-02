@@ -36,7 +36,7 @@
 00000000000i[IMG   ] Disk image modules
 00000000000i[IMG   ]   flat concat sparse dll growing undoable volatile vmware3
 00000000000i[IMG   ]   vmware4 vbox vpc vvfat
-00000000000i[MEM0  ] allocated memory at 0x7f3981c59010. after alignment, vector=0x7f3981c5a000, block_size = 128K
+00000000000i[MEM0  ] allocated memory at 0x7f0a83f36010. after alignment, vector=0x7f0a83f37000, block_size = 128K
 00000000000i[MEM0  ] 1024.00MB
 00000000000i[MEM0  ] mem block size = 0x00020000, blocks=8192
 00000000000i[MEM0  ] rom at 0xfffe0000/131072 ('/usr/local/share/bochs/BIOS-bochs-latest')
@@ -49,7 +49,7 @@
 00000000000i[PLUGIN] init_dev of 'cmos' plugin device by virtual method
 00000000000i[CMOS  ] CMOS RTC using realtime synchronisation method
 00000000000i[CMOS  ] Using utc time for initial clock
-00000000000i[CMOS  ] Setting initial clock to: Thu May  1 17:33:34   2025 tz=utc (time0=1746120814)
+00000000000i[CMOS  ] Setting initial clock to: Fri May  2 17:42:20   2025 tz=utc (time0=1746207740)
 00000000000i[PLUGIN] init_dev of 'dma' plugin device by virtual method
 00000000000i[DMA   ] channel 4 used by cascade
 00000000000i[PLUGIN] init_dev of 'pic' plugin device by virtual method
@@ -85,7 +85,7 @@
 00000000000i[CD1   ] load cdrom with path='build/system.iso'
 00000000000i[CD1   ] Opening image file as a cd.
 00000000000i[HD    ] Media present in CD-ROM drive
-00000000000i[HD    ] Capacity is 2562 sectors (5.00 MB)
+00000000000i[HD    ] Capacity is 2565 sectors (5.01 MB)
 00000000000i[PLUGIN] init_dev of 'pci_ide' plugin device by virtual method
 00000000000i[DEV   ] PIIX3 PCI IDE controller present at device 1, function 1
 00000000000i[PLUGIN] init_dev of 'unmapped' plugin device by virtual method
@@ -231,30 +231,30 @@
 00001497609i[BXVGA ] VBE known Display Interface b0c5
 00001499030i[VBIOS ] VBE Bios ID: vbe.c 2024-03-03
 00005106997i[BIOS  ] IDE time out
-03397261452i[BIOS  ] Booting from 07c0:0000
-03471438632i[CPU0  ] RDMSR: Read 00000000:fee00900 from MSR_APICBASE
-03471438634i[CPU0  ] WRMSR: wrote 00000000:fee00900 to MSR_APICBASE
-03471438634i[APIC0 ] allocate APIC id=0 (MMIO enabled) to 0x0000fee00000
-03472184361i[APIC0 ] set timer divide factor to 1
-03481267451i[APIC0 ] set timer divide factor to 16
-70352388000p[XGUI  ] >>PANIC<< POWER button turned off.
-70352388000i[CPU0  ] CPU is in protected mode (halted)
-70352388000i[CPU0  ] CS.mode = 32 bit
-70352388000i[CPU0  ] SS.mode = 32 bit
-70352388000i[CPU0  ] EFER   = 0x00000000
-70352388000i[CPU0  ] | EAX=ffbfefdc  EBX=ffbfffa6  ECX=0000b5d0  EDX=00000000
-70352388000i[CPU0  ] | ESP=ffbfeff0  EBP=ffbfffe8  ESI=00000001  EDI=00000010
-70352388000i[CPU0  ] | IOPL=0 id vip vif ac vm rf nt of df IF tf SF zf af PF cf
-70352388000i[CPU0  ] | SEG sltr(index|ti|rpl)     base    limit G D
-70352388000i[CPU0  ] |  CS:0008( 0001| 0|  0) 00000000 ffffffff 1 1
-70352388000i[CPU0  ] |  DS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
-70352388000i[CPU0  ] |  SS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
-70352388000i[CPU0  ] |  ES:0010( 0002| 0|  0) 00000000 ffffffff 1 1
-70352388000i[CPU0  ] |  FS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
-70352388000i[CPU0  ] |  GS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
-70352388000i[CPU0  ] | EIP=c0108b7a (c0108b7a)
-70352388000i[CPU0  ] | CR0=0xe0000011 CR2=0x00000000
-70352388000i[CPU0  ] | CR3=0x00131000 CR4=0x00000000
-70352388000i[CMOS  ] Last time: 1746120852 tz=utc (Thu May  1 17:34:12   2025)
-70352388000i[XGUI  ] Exit
-70352388000i[SIM   ] quit_sim called with exit code 1
+03263354676i[BIOS  ] Booting from 07c0:0000
+03334297145i[CPU0  ] RDMSR: Read 00000000:fee00900 from MSR_APICBASE
+03334297147i[CPU0  ] WRMSR: wrote 00000000:fee00900 to MSR_APICBASE
+03334297147i[APIC0 ] allocate APIC id=0 (MMIO enabled) to 0x0000fee00000
+03335611781i[APIC0 ] set timer divide factor to 1
+03344505162i[APIC0 ] set timer divide factor to 16
+211295360000p[XGUI  ] >>PANIC<< POWER button turned off.
+211295360000i[CPU0  ] CPU is in protected mode (halted)
+211295360000i[CPU0  ] CS.mode = 32 bit
+211295360000i[CPU0  ] SS.mode = 32 bit
+211295360000i[CPU0  ] EFER   = 0x00000000
+211295360000i[CPU0  ] | EAX=ffbfefdc  EBX=ffbfffa6  ECX=0002419b  EDX=00000000
+211295360000i[CPU0  ] | ESP=ffbfeff0  EBP=ffbfffe8  ESI=00000001  EDI=00000010
+211295360000i[CPU0  ] | IOPL=0 id vip vif ac vm rf nt of df IF tf SF zf af PF cf
+211295360000i[CPU0  ] | SEG sltr(index|ti|rpl)     base    limit G D
+211295360000i[CPU0  ] |  CS:0008( 0001| 0|  0) 00000000 ffffffff 1 1
+211295360000i[CPU0  ] |  DS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
+211295360000i[CPU0  ] |  SS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
+211295360000i[CPU0  ] |  ES:0010( 0002| 0|  0) 00000000 ffffffff 1 1
+211295360000i[CPU0  ] |  FS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
+211295360000i[CPU0  ] |  GS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
+211295360000i[CPU0  ] | EIP=c0108c9b (c0108c9b)
+211295360000i[CPU0  ] | CR0=0xe0000011 CR2=0x00000000
+211295360000i[CPU0  ] | CR3=0x00131000 CR4=0x00000000
+211295360000i[CMOS  ] Last time: 1746207849 tz=utc (Fri May  2 17:44:09   2025)
+211295360000i[XGUI  ] Exit
+211295360000i[SIM   ] quit_sim called with exit code 1
