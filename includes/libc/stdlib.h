@@ -9,6 +9,14 @@ char* __itoa_internal(int value, char* str, int base, unsigned int* size);
 char* itoa(int value, char* str, int base);
 
 /**
+ * @brief 返回整數的絕對值
+ * 
+ * @param value 要取絕對值的整數
+ * @return int 絕對值結果
+ */
+int abs(int value);
+
+/**
  * @brief 分配指定大小的内存
  * 
  * @param size 欲分配的大小
