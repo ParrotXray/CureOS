@@ -36,7 +36,7 @@
 00000000000i[IMG   ] Disk image modules
 00000000000i[IMG   ]   flat concat sparse dll growing undoable volatile vmware3
 00000000000i[IMG   ]   vmware4 vbox vpc vvfat
-00000000000i[MEM0  ] allocated memory at 0x7f0a83f36010. after alignment, vector=0x7f0a83f37000, block_size = 128K
+00000000000i[MEM0  ] allocated memory at 0x7fd35a4ef010. after alignment, vector=0x7fd35a4f0000, block_size = 128K
 00000000000i[MEM0  ] 1024.00MB
 00000000000i[MEM0  ] mem block size = 0x00020000, blocks=8192
 00000000000i[MEM0  ] rom at 0xfffe0000/131072 ('/usr/local/share/bochs/BIOS-bochs-latest')
@@ -49,7 +49,7 @@
 00000000000i[PLUGIN] init_dev of 'cmos' plugin device by virtual method
 00000000000i[CMOS  ] CMOS RTC using realtime synchronisation method
 00000000000i[CMOS  ] Using utc time for initial clock
-00000000000i[CMOS  ] Setting initial clock to: Fri May  2 17:42:20   2025 tz=utc (time0=1746207740)
+00000000000i[CMOS  ] Setting initial clock to: Sat May  3 10:57:49   2025 tz=utc (time0=1746269869)
 00000000000i[PLUGIN] init_dev of 'dma' plugin device by virtual method
 00000000000i[DMA   ] channel 4 used by cascade
 00000000000i[PLUGIN] init_dev of 'pic' plugin device by virtual method
@@ -231,30 +231,30 @@
 00001497609i[BXVGA ] VBE known Display Interface b0c5
 00001499030i[VBIOS ] VBE Bios ID: vbe.c 2024-03-03
 00005106997i[BIOS  ] IDE time out
-03263354676i[BIOS  ] Booting from 07c0:0000
-03334297145i[CPU0  ] RDMSR: Read 00000000:fee00900 from MSR_APICBASE
-03334297147i[CPU0  ] WRMSR: wrote 00000000:fee00900 to MSR_APICBASE
-03334297147i[APIC0 ] allocate APIC id=0 (MMIO enabled) to 0x0000fee00000
-03335611781i[APIC0 ] set timer divide factor to 1
-03344505162i[APIC0 ] set timer divide factor to 16
-211295360000p[XGUI  ] >>PANIC<< POWER button turned off.
-211295360000i[CPU0  ] CPU is in protected mode (halted)
-211295360000i[CPU0  ] CS.mode = 32 bit
-211295360000i[CPU0  ] SS.mode = 32 bit
-211295360000i[CPU0  ] EFER   = 0x00000000
-211295360000i[CPU0  ] | EAX=ffbfefdc  EBX=ffbfffa6  ECX=0002419b  EDX=00000000
-211295360000i[CPU0  ] | ESP=ffbfeff0  EBP=ffbfffe8  ESI=00000001  EDI=00000010
-211295360000i[CPU0  ] | IOPL=0 id vip vif ac vm rf nt of df IF tf SF zf af PF cf
-211295360000i[CPU0  ] | SEG sltr(index|ti|rpl)     base    limit G D
-211295360000i[CPU0  ] |  CS:0008( 0001| 0|  0) 00000000 ffffffff 1 1
-211295360000i[CPU0  ] |  DS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
-211295360000i[CPU0  ] |  SS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
-211295360000i[CPU0  ] |  ES:0010( 0002| 0|  0) 00000000 ffffffff 1 1
-211295360000i[CPU0  ] |  FS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
-211295360000i[CPU0  ] |  GS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
-211295360000i[CPU0  ] | EIP=c0108c9b (c0108c9b)
-211295360000i[CPU0  ] | CR0=0xe0000011 CR2=0x00000000
-211295360000i[CPU0  ] | CR3=0x00131000 CR4=0x00000000
-211295360000i[CMOS  ] Last time: 1746207849 tz=utc (Fri May  2 17:44:09   2025)
-211295360000i[XGUI  ] Exit
-211295360000i[SIM   ] quit_sim called with exit code 1
+02715129966i[BIOS  ] Booting from 07c0:0000
+02850995164i[CPU0  ] RDMSR: Read 00000000:fee00900 from MSR_APICBASE
+02850995166i[CPU0  ] WRMSR: wrote 00000000:fee00900 to MSR_APICBASE
+02850995166i[APIC0 ] allocate APIC id=0 (MMIO enabled) to 0x0000fee00000
+02852309800i[APIC0 ] set timer divide factor to 1
+02860539809i[APIC0 ] set timer divide factor to 16
+10421608000p[XGUI  ] >>PANIC<< POWER button turned off.
+10421608000i[CPU0  ] CPU is in protected mode (halted)
+10421608000i[CPU0  ] CS.mode = 32 bit
+10421608000i[CPU0  ] SS.mode = 32 bit
+10421608000i[CPU0  ] EFER   = 0x00000000
+10421608000i[CPU0  ] | EAX=ffbfefdc  EBX=ffbfffa6  ECX=000016b6  EDX=00000000
+10421608000i[CPU0  ] | ESP=ffbfeff0  EBP=ffbfffe8  ESI=00000001  EDI=00000010
+10421608000i[CPU0  ] | IOPL=0 id vip vif ac vm rf nt of df IF tf SF zf af PF cf
+10421608000i[CPU0  ] | SEG sltr(index|ti|rpl)     base    limit G D
+10421608000i[CPU0  ] |  CS:0008( 0001| 0|  0) 00000000 ffffffff 1 1
+10421608000i[CPU0  ] |  DS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
+10421608000i[CPU0  ] |  SS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
+10421608000i[CPU0  ] |  ES:0010( 0002| 0|  0) 00000000 ffffffff 1 1
+10421608000i[CPU0  ] |  FS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
+10421608000i[CPU0  ] |  GS:0010( 0002| 0|  0) 00000000 ffffffff 1 1
+10421608000i[CPU0  ] | EIP=c0108cba (c0108cba)
+10421608000i[CPU0  ] | CR0=0xe0000011 CR2=0x00000000
+10421608000i[CPU0  ] | CR3=0x00131000 CR4=0x00000000
+10421608000i[CMOS  ] Last time: 1746269879 tz=utc (Sat May  3 10:57:59   2025)
+10421608000i[XGUI  ] Exit
+10421608000i[SIM   ] quit_sim called with exit code 1

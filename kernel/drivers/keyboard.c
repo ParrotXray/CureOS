@@ -33,6 +33,26 @@
 #define KEY_NUM_LOCK  0x45
 #define KEY_SCROLL_LOCK 0x46
 
+// 數字鍵盤掃描碼
+#define KEY_KP_SLASH    0x35  // Keypad /
+#define KEY_KP_ASTERISK 0x37  // Keypad *
+#define KEY_KP_MINUS    0x4A  // Keypad -
+#define KEY_KP_PLUS     0x4E  // Keypad +
+#define KEY_KP_ENTER    0x1C  // Keypad Enter (需要特殊前綴)
+#define KEY_KP_DOT      0x53  // Keypad .
+
+// 數字鍵盤的掃描碼 (7, 8, 9, 4, 5, 6, 1, 2, 3, 0)
+#define KEY_KP_7        0x47
+#define KEY_KP_8        0x48
+#define KEY_KP_9        0x49
+#define KEY_KP_4        0x4B
+#define KEY_KP_5        0x4C
+#define KEY_KP_6        0x4D
+#define KEY_KP_1        0x4F
+#define KEY_KP_2        0x50
+#define KEY_KP_3        0x51
+#define KEY_KP_0        0x52
+
 // 按鍵修飾符狀態
 static struct {
     uint8_t shift : 1;
@@ -66,21 +86,20 @@ static const char keymap_us_shift[128] = {
 
 // 數字鍵盤映射表 - 直接使用掃描碼作為索引
 static const char keypad_map[128] = {
-    [0x47] = '7',  // Keypad 7
-    [0x48] = '8',  // Keypad 8
-    [0x49] = '9',  // Keypad 9
-    [0x4A] = '-',  // Keypad -
-    [0x4B] = '4',  // Keypad 4
-    [0x4C] = '5',  // Keypad 5
-    [0x4D] = '6',  // Keypad 6
-    [0x4E] = '+',  // Keypad +
-    [0x4F] = '1',  // Keypad 1
-    [0x50] = '2',  // Keypad 2
-    [0x51] = '3',  // Keypad 3
-    [0x52] = '0',  // Keypad 0
-    [0x53] = '.',  // Keypad .
-    [0x35] = '/',  // Keypad /
-    [0x37] = '*',  // Keypad *
+    [KEY_KP_0] = '0',
+    [KEY_KP_1] = '1',
+    [KEY_KP_2] = '2',
+    [KEY_KP_3] = '3',
+    [KEY_KP_4] = '4',
+    [KEY_KP_5] = '5',
+    [KEY_KP_6] = '6',
+    [KEY_KP_7] = '7',
+    [KEY_KP_8] = '8',
+    [KEY_KP_9] = '9',
+    [KEY_KP_DOT] = '.',
+    [KEY_KP_PLUS] = '+',
+    [KEY_KP_MINUS] = '-',
+    [KEY_KP_ASTERISK] = '*',
 };
 
 // 鍵盤中斷處理程序
@@ -109,6 +128,9 @@ static void keyboard_handler(isr_param* param) {
             key_state.alt = !released;
         } else if (scancode == 0x1C && !released) {  // 數字鍵盤 Enter
             printf("\n");
+        } else if (scancode == KEY_KP_SLASH && !released) {
+            // 處理數字鍵盤的 / 鍵
+            printf("/");
         }
         
         goto end;
