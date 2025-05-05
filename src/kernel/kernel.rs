@@ -1,6 +1,7 @@
 // src/kernel/kernel.rs
 use core::arch::asm;
 use crate::kernel::tty::tty;
+use crate::{print, println};
 
 // boot.S 調用的入口點
 #[no_mangle]
@@ -20,11 +21,20 @@ pub extern "C" fn _kernel_post_init() {
 #[no_mangle]
 pub extern "C" fn _kernel_main() {
 
-    tty::tty_put_str("Loading....!\n");
-
+    println!("Loading....!");
+    
     // tty::tty_clear();
+    
+    println!("Welcome to Cure OS!");
 
-    tty::tty_put_str("Welcome to Cure OS!\n");
+    println!("{0} + {1} = {0}", 1, 2);
+
+    let name = "111";
+    let age = 25;
+    println!("{}, {}", name, age);
+
+    let value = 42;
+    println!("10: {}, 16: {:x}", value, value);
 
     unsafe {
         loop {
