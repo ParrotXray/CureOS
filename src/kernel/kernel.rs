@@ -1,6 +1,7 @@
 // src/kernel/kernel.rs
 use core::arch::asm;
 use crate::kernel::tty::tty;
+use crate::hal::cpu;
 use crate::{print, println};
 
 // boot.S 調用的入口點
@@ -38,7 +39,7 @@ pub extern "C" fn _kernel_main() {
 
     unsafe {
         loop {
-            asm!("hlt");
+            cpu::cpu_idle();
         }
     }
 }
