@@ -3,6 +3,7 @@
 
 mod kernel;
 mod hal;
+mod libs;
 
 use core::panic::PanicInfo;
 
