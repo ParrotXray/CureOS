@@ -10,7 +10,7 @@ pub extern "C" fn _kernel_init() {
 }
 
 #[no_mangle]
-pub extern "C" fn _kernel_main(multiboot_info: u32) {
+pub extern "C" fn _kernel_main(_multiboot_info: u32) {
     
     unsafe {
         loop {

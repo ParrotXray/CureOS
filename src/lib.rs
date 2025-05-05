@@ -2,6 +2,7 @@
 #![no_main]
 
 mod kernel;
+mod hal;
 
 use core::panic::PanicInfo;
 
