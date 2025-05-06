@@ -1,6 +1,7 @@
 // src/kernel/tty/tty.rs
 
 use crate::hal::io::{io_port_wb};
+use core::ptr::NonNull;
 
 /// VGA 屬性類型 (16位)
 pub type VgaAttribute = u16;
@@ -31,7 +32,7 @@ const VGA_DATA_PORT: u16 = 0x03D5;
 
 // 全局 TTY 狀態
 pub struct TTYState {
-    vga_buffer: *mut VgaAttribute,
+    vga_buffer: Option<NonNull<VgaAttribute>>,
     theme_color: VgaAttribute,
     x: usize,
     y: usize,
@@ -40,7 +41,7 @@ pub struct TTYState {
 impl TTYState {
     const fn new() -> Self {
         Self {
-            vga_buffer: VGA_BUFFER_PADDR as *mut VgaAttribute,
+            vga_buffer: None,
             theme_color: (VGA_COLOR_BLACK as VgaAttribute) << 8,
             x: 0,
             y: 0,
@@ -50,6 +51,7 @@ impl TTYState {
 
 static mut TTY_STATE: TTYState = TTYState::new();
 
+#[no_mangle]
 fn update_cursor() {
     unsafe {
         let pos = TTY_STATE.y * TTY_WIDTH + TTY_STATE.x;
@@ -63,21 +65,24 @@ fn update_cursor() {
 
 /// 初始化 TTY
 // vga_buf: *mut u8
+#[no_mangle]
 pub fn tty_init(vga_buf: usize) {
     unsafe {
-        TTY_STATE.vga_buffer = vga_buf as *mut VgaAttribute;
+        TTY_STATE.vga_buffer = NonNull::new(vga_buf as *mut VgaAttribute);
         tty_clear();
     }
 }
 
 /// 設置 VGA 緩衝區
+#[no_mangle]
 pub fn tty_set_buffer(vga_buf: usize) {
     unsafe {
-        TTY_STATE.vga_buffer = vga_buf as *mut VgaAttribute;
+        TTY_STATE.vga_buffer = NonNull::new(vga_buf as *mut VgaAttribute);
     }
 }
 
 /// 設置主題顏色（前景色和背景色）
+#[no_mangle]
 pub fn tty_set_theme(fg: u8, bg: u8) {
     unsafe {
         TTY_STATE.theme_color = ((bg << 4 | fg) as VgaAttribute) << 8;
@@ -92,37 +97,40 @@ pub fn tty_set_theme(fg: u8, bg: u8) {
 /// - '\t' 擴展為 4 個空格
 /// - '\n' 換行並將游標移至行首
 /// - '\r' 將游標移至行首
+#[no_mangle]
 pub fn tty_put_char(chr: char) {
     unsafe {
-        match chr {
-            '\t' => {
-                TTY_STATE.x += 4;
+        if let Some(vga_ptr) = TTY_STATE.vga_buffer {
+            match chr {
+                '\t' => {
+                    TTY_STATE.x += 4;
+                }
+                '\n' => {
+                    TTY_STATE.y += 1;
+                    TTY_STATE.x = 0;
+                }
+                '\r' => {
+                    TTY_STATE.x = 0;
+                }
+                _ => {
+                    let offset = TTY_STATE.x + TTY_STATE.y * TTY_WIDTH;
+                    // VGA 文本模式僅支持 8 位字符
+                    *vga_ptr.as_ptr().add(offset) = TTY_STATE.theme_color | (chr as u8) as VgaAttribute;
+                    TTY_STATE.x += 1;
+                }
             }
-            '\n' => {
+
+            if TTY_STATE.x >= TTY_WIDTH {
+                TTY_STATE.x = 0;
                 TTY_STATE.y += 1;
-                TTY_STATE.x = 0;
             }
-            '\r' => {
-                TTY_STATE.x = 0;
+            
+            if TTY_STATE.y >= TTY_HEIGHT {
+                tty_scroll_up();
             }
-            _ => {
-                let offset = TTY_STATE.x + TTY_STATE.y * TTY_WIDTH;
-                // VGA 文本模式僅支持 8 位字符
-                *TTY_STATE.vga_buffer.add(offset) = TTY_STATE.theme_color | (chr as u8) as VgaAttribute;
-                TTY_STATE.x += 1;
-            }
-        }
 
-        if TTY_STATE.x >= TTY_WIDTH {
-            TTY_STATE.x = 0;
-            TTY_STATE.y += 1;
+            update_cursor();
         }
-        
-        if TTY_STATE.y >= TTY_HEIGHT {
-            tty_scroll_up();
-        }
-
-        update_cursor();
     }
 }
 
@@ -131,6 +139,7 @@ pub fn tty_put_char(chr: char) {
 /// # 注意
 /// - 字符串中的多字節 Unicode 字符會被截斷為低 8 位
 /// - 支持 Rust 字符串切片 (&str)
+#[no_mangle]
 pub fn tty_put_str(s: &str) {
     for chr in s.chars() {
         tty_put_char(chr);
@@ -138,48 +147,64 @@ pub fn tty_put_str(s: &str) {
 }
 
 /// 向上滾動一行
+#[no_mangle]
 pub fn tty_scroll_up() {
     unsafe {
-        let last_line = TTY_WIDTH * (TTY_HEIGHT - 1);
-        
-        // 將所有行向上移動一行
-        core::ptr::copy(
-            TTY_STATE.vga_buffer.add(TTY_WIDTH),
-            TTY_STATE.vga_buffer,
-            last_line
-        );
-        
-        // 清空最後一行
-        for i in 0..TTY_WIDTH {
-            *TTY_STATE.vga_buffer.add(i + last_line) = TTY_STATE.theme_color;
+        if let Some(vga_ptr) = TTY_STATE.vga_buffer {
+            let last_line = TTY_WIDTH * (TTY_HEIGHT - 1);
+            let buffer_ptr = vga_ptr.as_ptr();
+            
+            // 將所有行向上移動一行
+            core::ptr::copy(
+                buffer_ptr.add(TTY_WIDTH),
+                buffer_ptr,
+                last_line
+            );
+            
+            // 清空最後一行
+            for i in 0..TTY_WIDTH {
+                *buffer_ptr.add(i + last_line) = TTY_STATE.theme_color;
+            }
+            
+            TTY_STATE.y = if TTY_STATE.y == 0 { 0 } else { TTY_HEIGHT - 1 };
         }
-        
-        TTY_STATE.y = if TTY_STATE.y == 0 { 0 } else { TTY_HEIGHT - 1 };
     }
 }
 
 /// 清空屏幕
+#[no_mangle]
 pub fn tty_clear() {
     unsafe {
-        for i in 0..(TTY_WIDTH * TTY_HEIGHT) {
-            *TTY_STATE.vga_buffer.add(i) = TTY_STATE.theme_color;
+        if let Some(vga_ptr) = TTY_STATE.vga_buffer {
+            let buffer_ptr = vga_ptr.as_ptr();
+
+            for i in 0..(TTY_WIDTH * TTY_HEIGHT) {
+                *buffer_ptr.add(i) = TTY_STATE.theme_color;
+            }
+
+            TTY_STATE.x = 0;
+            TTY_STATE.y = 0;
+            update_cursor();
         }
-        TTY_STATE.x = 0;
-        TTY_STATE.y = 0;
-        update_cursor();
     }
 }
 
 /// 清空指定行
+#[no_mangle]
 pub fn tty_clear_line(y: usize) {
     unsafe {
-        for i in 0..TTY_WIDTH {
-            *TTY_STATE.vga_buffer.add(i + y * TTY_WIDTH) = TTY_STATE.theme_color;
+        if let Some(vga_ptr) = TTY_STATE.vga_buffer {
+            let buffer_ptr = vga_ptr.as_ptr();
+
+            for i in 0..TTY_WIDTH {
+                *buffer_ptr.add(i + y * TTY_WIDTH) = TTY_STATE.theme_color;
+            }
         }
     }
 }
 
 /// 設置游標位置
+#[no_mangle]
 pub fn tty_set_cpos(x: usize, y: usize) {
     unsafe {
         TTY_STATE.x = x % TTY_WIDTH;
@@ -189,6 +214,7 @@ pub fn tty_set_cpos(x: usize, y: usize) {
 }
 
 /// 獲取游標位置
+#[no_mangle]
 pub fn tty_get_cpos() -> (usize, usize) {
     unsafe {
         (TTY_STATE.x, TTY_STATE.y)
@@ -196,6 +222,7 @@ pub fn tty_get_cpos() -> (usize, usize) {
 }
 
 /// 獲取當前主題顏色
+#[no_mangle]
 pub fn tty_get_theme() -> VgaAttribute {
     unsafe {
         TTY_STATE.theme_color

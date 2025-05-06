@@ -2,7 +2,6 @@
 
 pub mod tty;
 
-// 重新導出 TTY 公共函數
 pub use tty::tty_init;
 pub use tty::tty_set_buffer;
 pub use tty::tty_set_theme;

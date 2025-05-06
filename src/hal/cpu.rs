@@ -36,7 +36,7 @@ pub struct SgReg {
 pub fn cpu_r_cr0() -> Reg32 {
     let val: Reg32;
     unsafe {
-        asm!("mov %cr0, {}", out(reg) val);
+        asm!("mov %cr0, {0}", out(reg) val);
     }
     val
 }
@@ -46,7 +46,7 @@ pub fn cpu_r_cr0() -> Reg32 {
 pub fn cpu_r_cr2() -> Reg32 {
     let val: Reg32;
     unsafe {
-        asm!("mov %cr2, {}", out(reg) val);
+        asm!("mov %cr2, {0}", out(reg) val);
     }
     val
 }
@@ -56,7 +56,7 @@ pub fn cpu_r_cr2() -> Reg32 {
 pub fn cpu_r_cr3() -> Reg32 {
     let val: Reg32;
     unsafe {
-        asm!("mov %cr3, {}", out(reg) val);
+        asm!("mov %cr3, {0}", out(reg) val);
     }
     val
 }
@@ -65,7 +65,7 @@ pub fn cpu_r_cr3() -> Reg32 {
 #[inline]
 pub fn cpu_w_cr0(val: Reg32) {
     unsafe {
-        asm!("mov {}, %cr0", in(reg) val);
+        asm!("mov {0}, %cr0", in(reg) val);
     }
 }
 
@@ -73,7 +73,7 @@ pub fn cpu_w_cr0(val: Reg32) {
 #[inline]
 pub fn cpu_w_cr2(val: Reg32) {
     unsafe {
-        asm!("mov {}, %cr2", in(reg) val);
+        asm!("mov {0}, %cr2", in(reg) val);
     }
 }
 
@@ -81,7 +81,7 @@ pub fn cpu_w_cr2(val: Reg32) {
 #[inline]
 pub fn cpu_w_cr3(val: Reg32) {
     unsafe {
-        asm!("mov {}, %cr3", in(reg) val);
+        asm!("mov {0}, %cr3", in(reg) val);
     }
 }
 
@@ -112,12 +112,15 @@ pub fn cpu_get_model(model_out: &mut [u8]) {
     out[1] = edx;
     out[2] = ecx;
     
+    let _max_function_id: u32 = eax;
+
     // 確保以 null 結尾
     if model_out.len() > 12 {
         model_out[12] = 0;
     }
 }
 
+#[allow(dead_code)]
 const BRAND_LEAF: u32 = 0x80000000;
 
 /// 檢查是否支持品牌字串
@@ -136,7 +139,8 @@ pub fn cpu_brand_string_supported() -> bool {
         );
     }
     
-    eax >= 0x80000004
+    // eax >= 0x80000004
+    eax >= BRAND_LEAF + 4
 }
 
 /// 獲取 CPU 品牌字串

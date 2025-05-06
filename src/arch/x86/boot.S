@@ -18,6 +18,8 @@
 .section .text 
     .global start_
     start_:
+        cli
+        
         movl $stack_top, %esp
         /*
             TODO: kernel init
@@ -27,10 +29,31 @@
         */
         call _kernel_init
 
+        /* install gdt */
+        subl $0x6, %esp
+        movl $_GDT, 2(%esp)
+        movw _GDT_LIMIT, %ax
+        movw %ax, (%esp)
+        lgdt (%esp)
+        addl $0x6, %esp
+
+        /* processing register (CS, ES, SS, DS, FS, GS) */
+        movw $0x10, %cx /* 0x10 in binary representation is 0001 0000. If you right-shift this number by 3 bits, you will get 0000 0010, so the index is 2. */
+        movw %cx, %es
+        movw %cx, %ds
+        movw %cx, %fs
+        movw %cx, %gs
+        movw %cx, %ss
+
+        /* Change CS:IP */
+        pushw $0x08 /* 0x08 in binary representation is 0000 1000. If you right-shift this number by 3 bits, you will get 0000 0001, so the index is 1. */
+        pushl $_after_gdt
+        retf
+
+    _after_gdt: 
         pushl %ebx
         call _kernel_main
-
-        cli
+        
     j_:
         hlt
         jmp j_

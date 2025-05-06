@@ -22,24 +22,20 @@ $(ISO_DIR):
 	@mkdir -p $(ISO_BOOT_DIR)
 	@mkdir -p $(ISO_GRUB_DIR)
 
-# 編譯 Rust 代碼
 rust-kernel:
 	@echo "Building Rust kernel..."
 	@cargo build $(CARGO_FLAGS)
 
-# 編譯組合語言文件（如果還需要）
 $(OBJECT_DIR)/%.S.o: %.S
 	@mkdir -p $(@D)
 	@echo "Compiling: $< -> $@"
 	@$(CC) $(INCLUDES) -c $< -o $@
 
-# 編譯需要的 C 文件（如果還有）
 $(OBJECT_DIR)/%.c.o: %.c 
 	@mkdir -p $(@D)
 	@echo "Compiling: $< -> $@"
 	@$(CC) $(INCLUDES) -c $< -o $@ $(CFLAGS)
 
-# 連結
 $(BIN_DIR)/$(OS_BIN): $(OBJECT_DIR) $(BIN_DIR) rust-kernel $(SRC)
 	@echo "Linking..."
 	@cp target/$(RUST_TARGET)/$(BUILD_MODE)/libcure.a $(OBJECT_DIR)/
