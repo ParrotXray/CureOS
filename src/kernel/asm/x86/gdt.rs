@@ -24,9 +24,9 @@ pub const fn seg_lim_l(x: u64) -> u64           { x & 0x0ffff }
 #[allow(dead_code)]
 pub const fn seg_lim_h(x: u64) -> u64           { x & 0xf0000 }
 #[allow(dead_code)]
-pub const fn seg_base_l(x: u64) -> u64          { (x & 0x0000ffff) << 16 }
+pub const fn seg_base_l(x: u64) -> u64          { ((x & 0x0000ffff) << 16) }
 #[allow(dead_code)]
-pub const fn seg_base_m(x: u64) -> u64          { (x & 0x00ff0000) >> 16 }
+pub const fn seg_base_m(x: u64) -> u64          { ((x & 0x00ff0000) >> 16) }
 #[allow(dead_code)]
 pub const fn seg_base_h(x: u64) -> u64          { x & 0xff000000 }
 
@@ -98,7 +98,7 @@ pub static mut _GDT_LIMIT: u16 = (mem::size_of::<[u64; GDT_ENTRY]>() - 1) as u16
 #[no_mangle]
 pub fn _set_gdt_entry(index: usize, base: u64, limit: u64, flags: u64) {
     unsafe {
-        _GDT[index] = seg_base_h(base) | flags | seg_lim_h(limit) | seg_base_h(base);
+        _GDT[index] = seg_base_h(base) | flags | seg_lim_h(limit) | seg_base_m(base);
         _GDT[index] <<= 32;
         _GDT[index] |= seg_base_l(base) | seg_lim_l(limit);
     }

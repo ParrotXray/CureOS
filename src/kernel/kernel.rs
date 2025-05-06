@@ -41,7 +41,7 @@ pub extern "C" fn _kernel_main() {
     println!("10: {}, 16: {:x}", value, value);
 
     unsafe {
-        let x = gdt::_GDT_LIMIT;
+        let x = gdt::_GDT_LIMIT; 
         println!("GDT Limit: {}", x);
     }
 
