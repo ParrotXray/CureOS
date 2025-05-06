@@ -24,9 +24,9 @@ pub const fn seg_lim_l(x: u64) -> u64           { x & 0x0ffff }
 #[allow(dead_code)]
 pub const fn seg_lim_h(x: u64) -> u64           { x & 0xf0000 }
 #[allow(dead_code)]
-pub const fn seg_base_l(x: u64) -> u64          { ((x & 0x0000ffff) << 16) }
+pub const fn seg_base_l(x: u64) -> u64          { (x & 0x0000ffff) << 16 }
 #[allow(dead_code)]
-pub const fn seg_base_m(x: u64) -> u64          { ((x & 0x00ff0000) >> 16) }
+pub const fn seg_base_m(x: u64) -> u64          { (x & 0x00ff0000) >> 16 }
 #[allow(dead_code)]
 pub const fn seg_base_h(x: u64) -> u64          { x & 0xff000000 }
 
