@@ -21,8 +21,7 @@ pub fn io_port_wb(port: u16, value: u8) {
             "outb %al, %dx",
             in(reg_byte) value,
             in(reg) port,
-            out("al") _,
-            out("dx") _,
+            out("al") _, out("dx") _,
             options(att_syntax)
         );
     }
@@ -42,8 +41,7 @@ pub fn io_port_wl(port: u16, value: u32) {
             "outl %eax, %dx",
             in(reg) value,
             in(reg) port,
-            out("eax") _,
-            out("dx") _,
+            out("al") _, out("dx") _,
             options(att_syntax)
         );
     }
@@ -65,8 +63,7 @@ pub fn io_port_rb(port: u16) -> u8 {
             "movb %al, {0}",
             out(reg_byte) value,
             in(reg) port,
-            out("al") _,
-            out("dx") _,
+            out("al") _, out("dx") _,
             options(att_syntax)
         );
     }
@@ -89,8 +86,7 @@ pub fn io_port_rl(port: u16) -> u32 {
             "movl %eax, {0}",
             out(reg) value,
             in(reg) port,
-            out("eax") _,
-            out("dx") _,
+            out("al") _, out("dx") _,
             options(att_syntax)
         );
     }

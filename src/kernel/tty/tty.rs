@@ -27,8 +27,8 @@ pub const VGA_BUFFER_PADDR: usize = 0xB8000;
 
 const TTY_WIDTH: usize = 80;
 const TTY_HEIGHT: usize = 25;
-const VGA_CTRL_PORT: u16 = 0x03D4;
-const VGA_DATA_PORT: u16 = 0x03D5;
+const VGA_CTRL_PORT: u16 = 0x3D4;
+const VGA_DATA_PORT: u16 = 0x3D5;
 
 // 全局 TTY 狀態
 pub struct TTYState {
@@ -51,17 +51,17 @@ impl TTYState {
 
 static mut TTY_STATE: TTYState = TTYState::new();
 
-#[no_mangle]
-fn update_cursor() {
-    unsafe {
-        let pos = TTY_STATE.y * TTY_WIDTH + TTY_STATE.x;
+// #[no_mangle]
+// fn update_cursor() {
+//     unsafe {
+//         let pos = TTY_STATE.y * TTY_WIDTH + TTY_STATE.x;
         
-        io_port_wb(VGA_CTRL_PORT, 0x0F);
-        io_port_wb(VGA_DATA_PORT, (pos & 0xFF) as u8);
-        io_port_wb(VGA_CTRL_PORT, 0x0E);
-        io_port_wb(VGA_DATA_PORT, ((pos >> 8) & 0xFF) as u8);
-    }
-}
+//         io_port_wb(VGA_CTRL_PORT, 0x0F);
+//         io_port_wb(VGA_DATA_PORT, (pos & 0xFF) as u8);
+//         io_port_wb(VGA_CTRL_PORT, 0x0E);
+//         io_port_wb(VGA_DATA_PORT, ((pos >> 8) & 0xFF) as u8);
+//     }
+// }
 
 /// 初始化 TTY
 // vga_buf: *mut u8
@@ -129,7 +129,7 @@ pub fn tty_put_char(chr: char) {
                 tty_scroll_up();
             }
 
-            update_cursor();
+            // update_cursor();
         }
     }
 }
@@ -184,7 +184,7 @@ pub fn tty_clear() {
 
             TTY_STATE.x = 0;
             TTY_STATE.y = 0;
-            update_cursor();
+            // update_cursor();
         }
     }
 }
@@ -209,7 +209,7 @@ pub fn tty_set_cpos(x: usize, y: usize) {
     unsafe {
         TTY_STATE.x = x % TTY_WIDTH;
         TTY_STATE.y = y % TTY_HEIGHT;
-        update_cursor();
+        // update_cursor();
     }
 }
 
