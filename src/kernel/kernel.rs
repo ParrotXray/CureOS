@@ -3,7 +3,6 @@ use core::arch::asm;
 use crate::kernel::tty::tty;
 use crate::hal::cpu;
 use crate::{print, println};
-use crate::kernel::asm::x86::gdt;
 
 // boot.S 調用的入口點
 #[no_mangle]
@@ -37,6 +36,9 @@ pub extern "C" fn _kernel_main() {
 
     let value = 42;
     println!("10: {}, 16: {:x}", value, value);
+
+    let mut brand_buffer = [0u8; 64];
+    println!("{}", cpu::cpu_get_brand(&mut brand_buffer));
     
     // unsafe {
     //     core::arch::asm!(

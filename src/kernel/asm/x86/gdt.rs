@@ -39,17 +39,14 @@ pub const SEG_CODE_EXRDC: u64 = 0x0E; // Execute/Read, conforming
 #[allow(dead_code)]
 pub const SEG_CODE_EXRDCA: u64 = 0x0F; // Execute/Read, conforming, accessed
 
-#[allow(dead_code)]
-pub const NULL_SELECTOR: SegmentSelector = SegmentSelector::new(0, Ring::Ring0);
-#[allow(dead_code)]
-pub const KERNEL_CODE_SELECTOR: SegmentSelector = SegmentSelector::new(1, Ring::Ring0); // Index 1 in GDT Table, Ring 0 segment selector. 0x8
-#[allow(dead_code)]
-pub const KERNEL_DATA_SELECTOR: SegmentSelector = SegmentSelector::new(2, Ring::Ring0);
-#[allow(dead_code)]
-pub const USER_CODE_SELECTOR: SegmentSelector = SegmentSelector::new(3, Ring::Ring3);
-#[allow(dead_code)]
-pub const USER_DATA_SELECTOR: SegmentSelector = SegmentSelector::new(4, Ring::Ring3);
+const NULL_SELECTOR: SegmentSelector = SegmentSelector::new(0, Ring::Ring0);
+const KERNEL_CODE_SELECTOR: SegmentSelector = SegmentSelector::new(1, Ring::Ring0);
+const KERNEL_DATA_SELECTOR: SegmentSelector = SegmentSelector::new(2, Ring::Ring0);
+const USER_CODE_SELECTOR: SegmentSelector = SegmentSelector::new(3, Ring::Ring3);
+const USER_DATA_SELECTOR: SegmentSelector = SegmentSelector::new(4, Ring::Ring3);
 
+#[no_mangle]
+pub static NULL_SEL: u16 = NULL_SELECTOR.bits();
 #[no_mangle]
 pub static KERNEL_CODE_SEL: u16 = KERNEL_CODE_SELECTOR.bits();
 #[no_mangle]

@@ -1,33 +1,55 @@
 // src/kernel/tty/tty.rs
 
-use crate::hal::io::{io_port_wb};
+use crate::hal::io;
 use core::ptr::NonNull;
 
 /// VGA 屬性類型 (16位)
+#[allow(dead_code)]
 pub type VgaAttribute = u16;
 
 // VGA 顏色常量
+#[allow(dead_code)]
 pub const VGA_COLOR_BLACK: u8 = 0;
+#[allow(dead_code)]
 pub const VGA_COLOR_BLUE: u8 = 1;
+#[allow(dead_code)]
 pub const VGA_COLOR_GREEN: u8 = 2;
+#[allow(dead_code)]
 pub const VGA_COLOR_CYAN: u8 = 3;
+#[allow(dead_code)]
 pub const VGA_COLOR_RED: u8 = 4;
+#[allow(dead_code)]
 pub const VGA_COLOR_MAGENTA: u8 = 5;
+#[allow(dead_code)]
 pub const VGA_COLOR_BROWN: u8 = 6;
+#[allow(dead_code)]
 pub const VGA_COLOR_LIGHT_GREY: u8 = 7;
+#[allow(dead_code)]
 pub const VGA_COLOR_DARK_GREY: u8 = 8;
+#[allow(dead_code)]
 pub const VGA_COLOR_LIGHT_BLUE: u8 = 9;
+#[allow(dead_code)]
 pub const VGA_COLOR_LIGHT_GREEN: u8 = 10;
+#[allow(dead_code)]
 pub const VGA_COLOR_LIGHT_CYAN: u8 = 11;
+#[allow(dead_code)]
 pub const VGA_COLOR_LIGHT_RED: u8 = 12;
+#[allow(dead_code)]
 pub const VGA_COLOR_LIGHT_MAGENTA: u8 = 13;
+#[allow(dead_code)]
 pub const VGA_COLOR_LIGHT_BROWN: u8 = 14;
+#[allow(dead_code)]
 pub const VGA_COLOR_WHITE: u8 = 15;
+#[allow(dead_code)]
 pub const VGA_BUFFER_PADDR: usize = 0xB8000;
 
+#[allow(dead_code)]
 const TTY_WIDTH: usize = 80;
+#[allow(dead_code)]
 const TTY_HEIGHT: usize = 25;
+#[allow(dead_code)]
 const VGA_CTRL_PORT: u16 = 0x3D4;
+#[allow(dead_code)]
 const VGA_DATA_PORT: u16 = 0x3D5;
 
 // 全局 TTY 狀態
@@ -56,10 +78,10 @@ static mut TTY_STATE: TTYState = TTYState::new();
 //     unsafe {
 //         let pos = TTY_STATE.y * TTY_WIDTH + TTY_STATE.x;
         
-//         io_port_wb(VGA_CTRL_PORT, 0x0F);
-//         io_port_wb(VGA_DATA_PORT, (pos & 0xFF) as u8);
-//         io_port_wb(VGA_CTRL_PORT, 0x0E);
-//         io_port_wb(VGA_DATA_PORT, ((pos >> 8) & 0xFF) as u8);
+//         io::io_port_wb(VGA_CTRL_PORT, 0x0F);
+//         io::io_port_wb(VGA_DATA_PORT, (pos & 0xFF) as u8);
+//         io::io_port_wb(VGA_CTRL_PORT, 0x0E);
+//         io::io_port_wb(VGA_DATA_PORT, ((pos >> 8) & 0xFF) as u8);
 //     }
 // }
 
