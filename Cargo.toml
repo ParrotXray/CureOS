@@ -24,3 +24,4 @@ default = []
 debug = []
 
 [dependencies]
+x86 = "0.52.0"

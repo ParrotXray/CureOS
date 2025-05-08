@@ -1,4 +1,5 @@
 // src/hal/io.rs
+use x86::io;
 
 // :e - 32 位寄存器（如 eax, edx 等）
 // :x - 16 位寄存器（如 ax, dx 等）

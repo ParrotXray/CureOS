@@ -13,8 +13,6 @@ pub extern "C" fn _kernel_init() {
     // TODO: 啟用分頁
     tty::tty_init(tty::VGA_BUFFER_PADDR);
     tty::tty_set_theme(tty::VGA_COLOR_WHITE, tty::VGA_COLOR_BLACK);
-
-    gdt::_init_gdt();
 }
 
 #[no_mangle]
@@ -39,11 +37,15 @@ pub extern "C" fn _kernel_main() {
 
     let value = 42;
     println!("10: {}, 16: {:x}", value, value);
-
-    unsafe {
-        let x = gdt::_GDT_LIMIT; 
-        println!("GDT Limit: {}", x);
-    }
+    
+    // unsafe {
+    //     core::arch::asm!(
+    //         "movl $0, %eax",
+    //         "movl $0, %ebx",
+    //         "divl %ebx",
+    //         options(att_syntax)
+    //     );
+    // }
 
 
     loop {
