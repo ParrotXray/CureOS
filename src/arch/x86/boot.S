@@ -30,12 +30,14 @@
         call _kernel_init
 
         /* install gdt */
-        subl $0x6, %esp
-        movl $_GDT, 2(%esp)
-        movw _GDT_LIMIT, %ax
-        movw %ax, (%esp)
-        lgdt (%esp)
-        addl $0x6, %esp
+        call _load_gdt
+        // call _init_gdt
+        // subl $0x6, %esp
+        // movl $_GDT, 2(%esp)
+        // movw _GDT_LIMIT, %ax
+        // movw %ax, (%esp)
+        // lgdt (%esp)
+        // addl $0x6, %esp
 
         /* processing register (CS, ES, SS, DS, FS, GS) */
         movw $0x10, %cx /* 0x10 in binary representation is 0001 0000. If you right-shift this number by 3 bits, you will get 0000 0010, so the index is 2. */

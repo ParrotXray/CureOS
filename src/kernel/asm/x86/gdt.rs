@@ -1,34 +1,10 @@
 // src/kernel/asm/x86/gdt.rs
-
 use core::mem;
-
-#[allow(dead_code)]
-pub const fn sd_type(x: u64) -> u64             { x << 8 }
-#[allow(dead_code)]
-pub const fn sd_code_data(x: u64) -> u64        { x << 12 }
-#[allow(dead_code)]
-pub const fn sd_dpl(x: u64) -> u64              { x << 13 }
-#[allow(dead_code)]
-pub const fn sd_present(x: u64) -> u64          { x << 15 }
-#[allow(dead_code)]
-pub const fn sd_avl(x: u64) -> u64              { x << 20 }
-#[allow(dead_code)]
-pub const fn sd_64bits(x: u64) -> u64           { x << 21 }
-#[allow(dead_code)]
-pub const fn sd_32bits(x: u64) -> u64           { x << 22 }
-#[allow(dead_code)]
-pub const fn sd_4k_gran(x: u64) -> u64          { x << 23 }
-
-#[allow(dead_code)]
-pub const fn seg_lim_l(x: u64) -> u64           { x & 0x0ffff }
-#[allow(dead_code)]
-pub const fn seg_lim_h(x: u64) -> u64           { x & 0xf0000 }
-#[allow(dead_code)]
-pub const fn seg_base_l(x: u64) -> u64          { (x & 0x0000ffff) << 16 }
-#[allow(dead_code)]
-pub const fn seg_base_m(x: u64) -> u64          { (x & 0x00ff0000) >> 16 }
-#[allow(dead_code)]
-pub const fn seg_base_h(x: u64) -> u64          { x & 0xff000000 }
+use core::ptr;
+use x86::segmentation::{self, Descriptor, DataSegmentType, CodeSegmentType, SegmentSelector};
+use x86::segmentation::{SegmentDescriptorBuilder, BuildDescriptor};
+use x86::dtables::{DescriptorTablePointer, lgdt};
+use x86::Ring;
 
 #[allow(dead_code)]
 pub const SEG_DATA_RD: u64 = 0x00; // Read-Only
@@ -64,52 +40,93 @@ pub const SEG_CODE_EXRDC: u64 = 0x0E; // Execute/Read, conforming
 pub const SEG_CODE_EXRDCA: u64 = 0x0F; // Execute/Read, conforming, accessed
 
 #[allow(dead_code)]
-pub const SEG_R0_CODE: u64 = 
-    sd_type(SEG_CODE_EXRD) | sd_code_data(1) | sd_dpl(0) |
-    sd_present(1) | sd_avl(0) | sd_64bits(0) | sd_32bits(1) |
-    sd_4k_gran(1);
-
+pub const NULL_SELECTOR: SegmentSelector = SegmentSelector::new(0, Ring::Ring0);
 #[allow(dead_code)]
-pub const SEG_R0_DATA: u64 = 
-    sd_type(SEG_DATA_RDWR) | sd_code_data(1) | sd_dpl(0) |
-    sd_present(1) | sd_avl(0) | sd_64bits(0) | sd_32bits(1) |
-    sd_4k_gran(1);
-
+pub const KERNEL_CODE_SELECTOR: SegmentSelector = SegmentSelector::new(1, Ring::Ring0); // Index 1 in GDT Table, Ring 0 segment selector. 0x8
 #[allow(dead_code)]
-pub const SEG_R3_CODE: u64 = 
-    sd_type(SEG_CODE_EXRD) | sd_code_data(1) | sd_dpl(3) |
-    sd_present(1) | sd_avl(0) | sd_64bits(0) | sd_32bits(1) |
-    sd_4k_gran(1);
-
+pub const KERNEL_DATA_SELECTOR: SegmentSelector = SegmentSelector::new(2, Ring::Ring0);
 #[allow(dead_code)]
-pub const SEG_R3_DATA: u64 = 
-    sd_type(SEG_DATA_RDWR) | sd_code_data(1) | sd_dpl(3) |
-    sd_present(1) | sd_avl(0) | sd_64bits(0) | sd_32bits(1) |
-    sd_4k_gran(1);
-
-pub const GDT_ENTRY: usize = 5;
+pub const USER_CODE_SELECTOR: SegmentSelector = SegmentSelector::new(3, Ring::Ring3);
+#[allow(dead_code)]
+pub const USER_DATA_SELECTOR: SegmentSelector = SegmentSelector::new(4, Ring::Ring3);
 
 #[no_mangle]
-pub static mut _GDT: [u64; GDT_ENTRY] = [0; GDT_ENTRY];
+pub static KERNEL_CODE_SEL: u16 = KERNEL_CODE_SELECTOR.bits();
+#[no_mangle]
+pub static KERNEL_DATA_SEL: u16 = KERNEL_DATA_SELECTOR.bits();
+#[no_mangle]
+pub static USER_CODE_SEL: u16 = USER_CODE_SELECTOR.bits();
+#[no_mangle]
+pub static USER_DATA_SEL: u16 = USER_DATA_SELECTOR.bits();
+
+pub const GDT_ENTRY_COUNT: usize = 5;
 
 #[no_mangle]
-pub static mut _GDT_LIMIT: u16 = (mem::size_of::<[u64; GDT_ENTRY]>() - 1) as u16;
+pub static mut _GDT: [Descriptor; GDT_ENTRY_COUNT] = [Descriptor::NULL; GDT_ENTRY_COUNT];
 
 #[no_mangle]
-pub fn _set_gdt_entry(index: usize, base: u64, limit: u64, flags: u64) {
+pub static mut _GDT_LIMIT: u16 = (mem::size_of::<[Descriptor; GDT_ENTRY_COUNT]>() - 1) as u16;
+
+#[no_mangle]
+pub extern "C" fn _init_gdt() {
     unsafe {
-        _GDT[index] = seg_base_h(base) | flags | seg_lim_h(limit) | seg_base_m(base);
-        _GDT[index] <<= 32;
-        _GDT[index] |= seg_base_l(base) | seg_lim_l(limit);
+        _GDT[0] = Descriptor::NULL;
+        
+        _GDT[1] = segmentation::DescriptorBuilder::code_descriptor(
+                0,
+                0xFFFFF,
+                CodeSegmentType::ExecuteRead
+            )
+            .present()
+            .dpl(Ring::Ring0)
+            .db()
+            .limit_granularity_4kb()
+            .finish();
+
+        _GDT[2] = segmentation::DescriptorBuilder::data_descriptor(
+                0,
+                0xFFFFF,
+                DataSegmentType::ReadWrite
+            )
+            .present()
+            .dpl(Ring::Ring0) 
+            .db() 
+            .limit_granularity_4kb() 
+            .finish();
+        
+        _GDT[3] = segmentation::DescriptorBuilder::code_descriptor(
+                0,
+                0xFFFFF,
+                CodeSegmentType::ExecuteRead
+            )
+            .present() 
+            .dpl(Ring::Ring3)
+            .db()
+            .limit_granularity_4kb()
+            .finish();
+        
+        _GDT[4] = segmentation::DescriptorBuilder::data_descriptor(
+                0,
+                0xFFFFF,
+                DataSegmentType::ReadWrite
+            )
+            .present()
+            .dpl(Ring::Ring3)
+            .db()
+            .limit_granularity_4kb()
+            .finish();
     }
-    
 }
 
 #[no_mangle]
-pub fn _init_gdt() {
-    _set_gdt_entry(0, 0, 0, 0);
-    _set_gdt_entry(1, 0, 0xfffff, SEG_R0_CODE);
-    _set_gdt_entry(2, 0, 0xfffff, SEG_R0_DATA);
-    _set_gdt_entry(3, 0, 0xfffff, SEG_R3_CODE);
-    _set_gdt_entry(4, 0, 0xfffff, SEG_R3_DATA);
+pub extern "C" fn _load_gdt() {
+    unsafe {
+        _init_gdt();
+
+        let gdtr = DescriptorTablePointer {
+            limit: _GDT_LIMIT,
+            base: ptr::addr_of!(_GDT),
+        };
+        lgdt(&gdtr);
+    }
 }
