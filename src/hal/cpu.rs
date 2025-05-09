@@ -1,6 +1,5 @@
 // src/hal/cpu.rs
 use x86::controlregs::{
-    self, 
     cr0, 
     cr0_write, 
     cr2, 
@@ -18,19 +17,6 @@ use core::hint::spin_loop;
 use x86::irq::{enable, disable};
 use x86::halt;
 use core::arch::asm;
-
-/// Write cr4.
-///
-/// # Example
-///
-/// ```no_run
-/// use x86::controlregs::*;
-/// unsafe {
-///   let cr4 = cr4();
-///   let cr4 = cr4 | Cr4::CR4_ENABLE_PSE;
-///   cr4_write(cr4);
-/// }
-/// ```
 
 /// 32 位元暫存器類型
 #[allow(dead_code)]
@@ -64,6 +50,19 @@ pub struct SgReg {
     pub gs: Reg16,
     pub cs: Reg16,
 }
+
+/// Write cr4.
+///
+/// # Example
+///
+/// ```no_run
+/// use x86::controlregs::*;
+/// unsafe {
+///   let cr4 = cr4();
+///   let cr4 = cr4 | Cr4::CR4_ENABLE_PSE;
+///   cr4_write(cr4);
+/// }
+/// ```
 
 /// 讀取 CR0 暫存器
 #[allow(dead_code)]
@@ -125,10 +124,12 @@ pub fn cpu_w_cr4(val: Cr4) {
 /// 
 /// # 參數
 /// * `model_out` - 輸出緩衝區，至少需要 13 bytes
+/// # 返回
+/// 字符串切片，表示 CPU 供應商資訊
 #[allow(dead_code)]
-pub fn cpu_get_model(model_out: &mut [u8]) {
+pub fn cpu_get_model(model_out: &mut [u8]) -> &str {
     if model_out.len() < 13 {
-        return;
+        return "Buffer too small";
     }
     
     // 使用 cpuid 取得廠商 ID
@@ -137,13 +138,19 @@ pub fn cpu_get_model(model_out: &mut [u8]) {
     if let Some(vendor) = vendor_id {
         let vendor_string = vendor.as_str();
         let bytes = vendor_string.as_bytes();
-        let copy_len = core::cmp::min(bytes.len(), 12);
+        let copy_len = core::cmp::min(bytes.len(), model_out.len() - 1);
         
         model_out[..copy_len].copy_from_slice(&bytes[..copy_len]);
-        model_out[copy_len] = 0; // null 結尾
+        model_out[copy_len] = 0; // null
+
+        match core::str::from_utf8(&model_out[..copy_len]) {
+            Ok(s) => s,
+            Err(_) => "Invalid UTF-8"
+        }
     } else {
         model_out[0] = b'?';
         model_out[1] = 0;
+        "Unknown Vendor"
     }
 }
 
