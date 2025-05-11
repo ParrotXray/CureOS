@@ -1,11 +1,14 @@
 ## Preparing the development environment
 
+### Notice
+- Please do not use sudo su to enter the root environment to execute
+
 ### Task list
 - Building a pure GCC cross-compilation toolchain (i686-elf), not bundled with the system.
 - Building/Installing Bochs and QEMU.
 
 ### Compiling i686-elf-gcc
-Open the terminal and execute the [gcc-build.sh](gcc-build.sh) script; this may take about half an hour.
+Open the terminal and execute the [gcc-build.sh](../scripts/gcc-build.sh) script; this may take about half an hour.
 ```sh=
 bash ./gcc-build.sh
 ```
@@ -30,7 +33,7 @@ This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 ```
 ### Compiling Bochs
-Download the [source code](https://sourceforge.net/projects/bochs/files/bochs/2.8/), extract it, and place the [bochs-build.sh](bochs-build.sh) script in the folder. Then, execute the script in the current folder.
+Download the [source code](https://sourceforge.net/projects/bochs/files/bochs/), extract it, and place the [bochs-build.sh](../scripts/bochs-build.sh) script in the folder. Then, execute the script in the current folder.
 ```sh=
 sudo apt install libx11-dev xserver-xorg-dev xorg-dev -y
 sudo apt install libsdl2-dev -y
@@ -38,7 +41,7 @@ sudo apt install libncurses5-dev -y
 sudo apt install xorriso -y
 sudo apt install mtools -y
 sudo apt install qemu-system-i386 -y
-bash ./bochs-build.sh
+sudo bash ./bochs-build.sh
 ```
 **Test the command**
 ```sh=
