@@ -40,14 +40,14 @@ pub extern "C" fn _kernel_main() {
     println!("{}", cpu::cpu_get_brand(&mut brand_buffer));
     println!("{}", cpu::cpu_get_model(&mut brand_buffer));
     
-    // unsafe {
-    //     core::arch::asm!(
-    //         "movl $0, %eax",
-    //         "movl $0, %ebx",
-    //         "divl %ebx",
-    //         options(att_syntax)
-    //     );
-    // }
+    unsafe {
+        core::arch::asm!(
+            "movl $0, %eax",
+            "movl $0, %ebx",
+            "divl %ebx",
+            options(att_syntax)
+        );
+    }
 
     // cpu::cpu_enable_interrupts();
 
