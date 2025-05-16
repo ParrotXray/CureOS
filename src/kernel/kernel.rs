@@ -41,11 +41,25 @@ pub extern "C" fn _kernel_main() {
     println!("{}", cpu::cpu_get_model(&mut brand_buffer));
     
     unsafe {
-        core::arch::asm!(
-            "movl $0, %eax",
-            "movl $0, %ebx",
-            "divl %ebx",
-            options(att_syntax)
+        let eflags: u32;
+        asm!("pushfd; pop {}", out(reg) eflags);
+        println!("Current EFLAGS: 0x{:x}", eflags);
+    }
+
+    // unsafe {
+    //     core::arch::asm!(
+    //         "movl $0, %eax",
+    //         "movl $0, %ebx",
+    //         "divl %ebx",
+    //         options(att_syntax)
+    //     );
+    // }
+
+    unsafe {
+        asm!(
+            "mov ax, 0x27",
+            "mov ds, ax",
+            options(nostack)
         );
     }
 
@@ -53,7 +67,7 @@ pub extern "C" fn _kernel_main() {
 
     // unsafe {
     //     core::arch::asm!(
-    //         "int $0",
+    //         "int $13",
     //         options(att_syntax)
     //     );
     // }

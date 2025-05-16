@@ -39,8 +39,6 @@
         // lgdt (%esp)
         // addl $0x6, %esp
 
-        call _load_idt
-
         /* processing register (CS, ES, SS, DS, FS, GS) */
         movw KERNEL_DATA_SEL, %cx /* 0x10 in binary representation is 0001 0000. If you right-shift this number by 3 bits, you will get 0000 0010, so the index is 2. */
         movw %cx, %es
@@ -56,6 +54,8 @@
 
     _after_gdt: 
         pushl %ebx
+
+        call _load_idt
         call _kernel_main
         
     j_:
