@@ -1,18 +1,39 @@
+#define __ASM__ 1
+
 #include "multiboot.h"
 
+#define MB_FLAGS    MULTIBOOT_MEMORY_INFO | MULTIBOOT_PAGE_ALIGN
+#define KPG_SIZE    24*1024
+
 .section .multiboot
-    /* Define type as 32 bit */
-    .long MB_MAGIC
-    .long MB_ALIGNED_4K_MEM_MAP
-    .long CHECKSUM(MB_ALIGNED_4K_MEM_MAP)
+    .long MULTIBOOT_MAGIC
+    .long MB_FLAGS
+    .long CHECKSUM(MB_FLAGS)
 
 /* .bss: stack */
 .section .bss
-    /* According to System V ABI, the stack must be aligned at 16 bytes boundary.*/ 
-    .align 16 /* Not divisible by 16, move forward until divisible */ 
+    .global mb_info
+    .align 16
+    /* Reserve space for Multiboot info struct */
+    mb_info:
+        .skip 4096
+    /* According to System V ABI, the stack address must be 16-byte aligned */
+    /* This is just a temporary stack. In _hhk_init we will initialize the kernel-specific stack */
     stack_bottom:
-        .skip 32708, 0
+        .skip 16318, 0
     stack_top:
+
+/* 
+    1 page directory, 
+    5 page tables:
+        1. Mapping reserved area and hhk_init
+        2-5. Remapping the kernels
+*/
+
+.section .kpg
+    .global _k_ptd
+    _k_ptd:
+        .skip KPG_SIZE, 0
 
 /* .text: put executable code */
 .section .text 

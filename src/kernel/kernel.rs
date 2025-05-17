@@ -2,7 +2,7 @@
 use core::arch::asm;
 use crate::kernel::tty::tty;
 use crate::hal::cpu;
-use crate::{print, println};
+use crate::{kprint, kprintln};
 
 #[no_mangle]
 pub extern "C" fn _kernel_init() {
@@ -21,29 +21,29 @@ pub extern "C" fn _kernel_post_init() {
 #[no_mangle]
 pub extern "C" fn _kernel_main() {
 
-    println!("Loading....!");
+    kprintln!("Loading....!");
     
     // tty::tty_clear();
     
-    println!("Welcome to Cure OS!");
+    kprintln!("Welcome to Cure OS!");
 
-    println!("{0} + {1} = {0}", 1, 2);
+    kprintln!("{0} + {1} = {0}", 1, 2);
 
     let name = "111";
     let age = 25;
-    println!("{}, {}", name, age);
+    kprintln!("{}, {}", name, age);
 
     let value = 42;
-    println!("10: {}, 16: {:x}", value, value);
+    kprintln!("10: {}, 16: {:x}", value, value);
 
     let mut brand_buffer = [0u8; 64];
-    println!("{}", cpu::cpu_get_brand(&mut brand_buffer));
-    println!("{}", cpu::cpu_get_model(&mut brand_buffer));
+    kprintln!("{}", cpu::cpu_get_brand(&mut brand_buffer));
+    kprintln!("{}", cpu::cpu_get_model(&mut brand_buffer));
     
     unsafe {
         let eflags: u32;
         asm!("pushfd; pop {}", out(reg) eflags);
-        println!("Current EFLAGS: 0x{:x}", eflags);
+        kprintln!("Current EFLAGS: 0x{:x}", eflags);
     }
 
     // unsafe {
@@ -67,7 +67,7 @@ pub extern "C" fn _kernel_main() {
 
     // unsafe {
     //     core::arch::asm!(
-    //         "int $13",
+    //         "int $0",
     //         options(att_syntax)
     //     );
     // }

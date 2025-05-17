@@ -1,9 +1,5 @@
-use core::mem;
-use core::ptr;
-use x86::segmentation::{SegmentSelector, Descriptor};
-use x86::Ring;
 use x86::irq::{self, PageFaultError, EXCEPTIONS};
-use crate::{print, println};
+use crate::{kprint, kprintln};
 use crate::hal::cpu;
 
 #[repr(C, packed)]
@@ -93,28 +89,28 @@ fn print_exception(param: &IsrParam) {
 
     if vector < 32 {
         let ex = &EXCEPTIONS[vector as usize];
-        println!("CPU Exception: {}", ex);
-        println!("EIP: 0x{:x}, CS: 0x{:x}, EFLAGS: 0x{:x}", param.eip(), param.cs(), param.eflags());
+        kprintln!("CPU Exception: {}", ex);
+        kprintln!("EIP: 0x{:x}, CS: 0x{:x}, EFLAGS: 0x{:x}", param.eip(), param.cs(), param.eflags());
 
         let error_code = param.err_code();
         
         if error_code != 0 {
-            println!("Error code: 0x{:x}", error_code);
+            kprintln!("Error code: 0x{:x}", error_code);
             
             if vector == irq::PAGE_FAULT_VECTOR.into() {
                 let cr2 = cpu::cpu_r_cr2() ;
                 let pf_error = PageFaultError::from_bits_truncate(error_code);
 
-                println!("Fault address: 0x{:x}", cr2);
-                println!("Fault details:\n{}", pf_error);
+                kprintln!("Fault address: 0x{:x}", cr2);
+                kprintln!("Fault details: {}", pf_error);
             }
         }
         
         // if let Some(addr) = fault_addr {
-        //     println!("Fault address: 0x{:x}", addr);
+        //     kprintln!("Fault address: 0x{:x}", addr);
         // }
     } else {
-        println!("Unhandled interrupt: Vector {}", vector);
+        kprintln!("Unhandled interrupt: Vector {}", vector);
     }
     
     loop {}

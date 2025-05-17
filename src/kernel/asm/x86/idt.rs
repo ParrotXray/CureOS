@@ -3,18 +3,16 @@ use core::mem;
 use core::ptr;
 use x86::dtables::{DescriptorTablePointer, lidt};
 use x86::segmentation::{
-    self, 
     SegmentSelector, 
     Descriptor, 
-    SystemDescriptorTypes32, 
     DescriptorBuilder, 
     BuildDescriptor
 };
 use x86::Ring;
-use x86::irq::{self, EXCEPTIONS};
+use x86::irq;
 use x86::segmentation::GateDescriptorBuilder;
 use x86::segmentation::TaskGateDescriptorBuilder;
-use crate::kernel::asm::x86::{interrupt, segment};
+use crate::kernel::asm::x86::segment;
 
 pub const IDT_ENTRY_COUNT: usize = 256;
 
@@ -25,22 +23,9 @@ pub static mut _IDT: [Descriptor; IDT_ENTRY_COUNT] = [Descriptor::NULL; IDT_ENTR
 pub static mut _IDT_LIMIT: u16 = (mem::size_of::<[Descriptor; IDT_ENTRY_COUNT]>() - 1) as u16;
 
 pub type InterruptHandler = unsafe extern "C" fn() -> ();
-pub type ExceptionHandlerWithErrorCode = fn(error_code: u32) -> ();
 
 #[no_mangle]
 pub fn _set_interrupt_handler(vector: u8, selector: SegmentSelector, handler: InterruptHandler, dpl: Ring) {
-    unsafe {
-        let desc = DescriptorBuilder::interrupt_descriptor(selector, handler as u32)
-            .present() 
-            .dpl(dpl)
-            .finish();
-        
-        _IDT[vector as usize] = desc;
-    }
-}
-
-#[no_mangle]
-pub fn _set_interrupt_err_handler(vector: u8, selector: SegmentSelector, handler: ExceptionHandlerWithErrorCode, dpl: Ring) {
     unsafe {
         let desc = DescriptorBuilder::interrupt_descriptor(selector, handler as u32)
             .present() 
