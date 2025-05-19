@@ -1,0 +1,25 @@
+error: entry point isn't in a segment.
+
+Press any key to continue...ß
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

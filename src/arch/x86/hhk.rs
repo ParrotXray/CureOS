@@ -142,9 +142,9 @@ pub extern "C" fn _save_subset(destination: *mut u8, base: *const u8, size: usiz
 
 /// 保存multiboot資訊
 #[no_mangle]
-pub extern "C" fn _save_multiboot_info(info: &MultibootInfo, destination: *mut u8) {
+pub extern "C" fn _save_multiboot_info(info: *const MultibootInfo, destination: *mut u8) {
     unsafe {
-        let info_ptr = info as *const MultibootInfo as *const u8;
+        let info_ptr = info as *const u8;
         let info_size = mem::size_of::<MultibootInfo>();
         
         // 複製主結構
@@ -160,19 +160,19 @@ pub extern "C" fn _save_multiboot_info(info: &MultibootInfo, destination: *mut u
         
         current += _save_subset(
             destination.add(current),
-            info.mmap_addr as *const u8,
-            info.mmap_length as usize
+            (*info).mmap_addr as *const u8,
+            (*info).mmap_length as usize
         );
         
         // 如果有驅動器信息，也保存
-        if present(info.flags, MULTIBOOT_INFO_DRIVE_INFO) {
+        if present((*info).flags, MULTIBOOT_INFO_DRIVE_INFO) {
             let drives_dest_addr = destination.add(current) as usize;
             (*(destination as *mut MultibootInfo)).drives_addr = drives_dest_addr as u32;
             
             current += _save_subset(
                 destination.add(current),
-                info.drives_addr as *const u8,
-                info.drives_length as usize
+                (*info).drives_addr as *const u8,
+                (*info).drives_length as usize
             );
         }
     }

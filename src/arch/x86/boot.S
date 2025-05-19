@@ -65,6 +65,5 @@
 
         addl $16, %esp
 
-        /* 进入高半核！ */
         pushl $hhk_entry_
         ret

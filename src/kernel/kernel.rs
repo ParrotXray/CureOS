@@ -2,10 +2,11 @@
 use core::arch::asm;
 use crate::kernel::tty::tty;
 use crate::hal::cpu;
+use crate::arch::x86::multiboot;
 use crate::{kprint, kprintln};
 
 #[no_mangle]
-pub extern "C" fn _kernel_init() {
+pub extern "C" fn _kernel_init(mb_info: *const multiboot::MultibootInfo) {
     // TODO: 加載 GDT OK
     // TODO: 加載 IDT OK
     // TODO: 啟用分頁
