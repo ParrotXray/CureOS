@@ -35,50 +35,36 @@
     _k_ptd:
         .skip KPG_SIZE, 0
 
-/* .text: put executable code */
-.section .text 
+.section .hhk_init
     .global start_
-    start_:
+    .type start_, @function     /* Optional, this just give the 
+                                 * linker more knowledge about the label 
+                                 */
+    start_: 
         cli
-        
+
         movl $stack_top, %esp
-        /*
-            TODO: kernel init
-                Load GDT
-                Load IDT
-                Enable paging  
-        */
-        call _kernel_init
 
-        /* install gdt */
-        call _load_gdt
-        // call _init_gdt
-        // subl $0x6, %esp
-        // movl $_GDT, 2(%esp)
-        // movw _GDT_LIMIT, %ax
-        // movw %ax, (%esp)
-        // lgdt (%esp)
-        // addl $0x6, %esp
+        subl $16, %esp
 
-        /* processing register (CS, ES, SS, DS, FS, GS) */
-        movw KERNEL_DATA_SEL, %cx /* 0x10 in binary representation is 0001 0000. If you right-shift this number by 3 bits, you will get 0000 0010, so the index is 2. */
-        movw %cx, %es
-        movw %cx, %ds
-        movw %cx, %fs
-        movw %cx, %gs
-        movw %cx, %ss
+        movl $mb_info, 4(%esp)
+        movl %ebx, (%esp)
+        call _save_multiboot_info
 
-        /* Change CS:IP */
-        pushw KERNEL_CODE_SEL /* 0x08 in binary representation is 0000 1000. If you right-shift this number by 3 bits, you will get 0000 0001, so the index is 1. */
-        pushl $_after_gdt
-        retf
+        movl $(KPG_SIZE), 4(%esp)
+        movl $(_k_ptd - 0xC0000000), (%esp)
+        call _hhk_init
 
-    _after_gdt: 
-        pushl %ebx
+        movl (%esp), %eax
+        andl $0xfffff000, %eax 
+        movl %eax, %cr3
 
-        call _load_idt
-        call _kernel_main
-        
-    j_:
-        hlt
-        jmp j_
+        movl %cr0, %eax
+        orl $0x80000000, %eax
+        movl %eax, %cr0
+
+        addl $16, %esp
+
+        /* 进入高半核！ */
+        pushl $hhk_entry_
+        ret

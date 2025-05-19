@@ -4,6 +4,7 @@ use crate::kernel::mm::page::{
     pd_index, pt_index, pde, pte, v2p, PtdT,
 };
 use crate::kernel::common::HIGHER_HLF_BASE;
+use core::mem;
 
 const PT_TABLE_IDENTITY: usize = 0;       // 使用表 #1
 const PT_TABLE_KERNEL: usize = 1;         // 使用表 #2-4 (因此內核最大大小為8MiB)
@@ -59,7 +60,8 @@ fn set_pte(ptd: *mut PtdT, pt_index: usize, pte_index: usize, pte_val: u32) {
 }
 
 /// 初始化頁面
-pub fn _init_page(ptd: *mut PtdT) {
+#[no_mangle]
+pub extern "C" fn _init_page(ptd: *mut PtdT) {
     // 設置第一個頁目錄條目，指向第一個頁表
     unsafe {
         set_pde(ptd, 0, pde(PG_PRESENT, ptd.add(PG_MAX_ENTRIES as usize) as u32));
@@ -128,7 +130,8 @@ pub fn _init_page(ptd: *mut PtdT) {
 }
 
 /// 保存子集數據
-fn _save_subset(destination: *mut u8, base: *const u8, size: usize) -> usize {
+#[no_mangle]
+pub extern "C" fn _save_subset(destination: *mut u8, base: *const u8, size: usize) -> usize {
     for i in 0..size {
         unsafe {
             *destination.add(i) = *base.add(i);
@@ -138,10 +141,11 @@ fn _save_subset(destination: *mut u8, base: *const u8, size: usize) -> usize {
 }
 
 /// 保存multiboot資訊
-pub fn _save_multiboot_info(info: &MultibootInfo, destination: *mut u8) {
+#[no_mangle]
+pub extern "C" fn _save_multiboot_info(info: &MultibootInfo, destination: *mut u8) {
     unsafe {
         let info_ptr = info as *const MultibootInfo as *const u8;
-        let info_size = core::mem::size_of::<MultibootInfo>();
+        let info_size = mem::size_of::<MultibootInfo>();
         
         // 複製主結構
         for i in 0..info_size {
@@ -175,7 +179,8 @@ pub fn _save_multiboot_info(info: &MultibootInfo, destination: *mut u8) {
 }
 
 /// 初始化HHK
-pub fn hhk_init(ptd: *mut PtdT, kpg_size: u32) {
+#[no_mangle]
+pub extern "C" fn _hhk_init(ptd: *mut PtdT, kpg_size: u32) {
     unsafe {
         // 初始化 kpg 全為0
         // P.s. 真沒想到GRUB會在這裡留下一堆垃圾！ 頁表全亂套了！

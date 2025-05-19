@@ -3,21 +3,23 @@ ENTRY(start_)
 SECTIONS {
     . = 0x100000;
 
-    .text BLOCK(4K): {
+    .hhk_init_text BLOCK(4K): {
         * (.multiboot) /* boot.o (.multiboot) */
         * (.text)
     }
 
-    .bss BLOCK(4K): {
+    .hhk_init_bss BLOCK(4K): {
         * (COMMON)
         * (.bss)
     }
 
-    .data BLOCK(4K): {
+    .hhk_init_data BLOCK(4K): {
         * (.data)
     }
 
-    .rodata BLOCK(4k): {
+    .hhk_init_rodata BLOCK(4k): {
         * (.rodata)
     }
+
+     __init_hhk_end = ALIGN(4K);
 }
