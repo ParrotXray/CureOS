@@ -1,0 +1,15 @@
+[package]
+name = "cure-builder"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[build-dependencies]
+bootloader = "0.11.12"
+
+# artifact dependency - 指定 kernel 的 target
+[build-dependencies.cure-kernel]
+path = "../kernel"
+artifact = "bin"
+target = "x86_64-unknown-none"
