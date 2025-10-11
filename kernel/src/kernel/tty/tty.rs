@@ -36,8 +36,6 @@ pub fn init(framebuffer: &'static mut FrameBuffer) {
         state.cursor_x = 0;
         state.cursor_y = 0;
     }
-
-    clear(0x000000);
 }
 
 pub fn clear(color: u32) {

@@ -2,71 +2,36 @@
 #![no_std]
 #![no_main]
 #![feature(abi_x86_interrupt)]
+#![feature(alloc_error_handler)]
+extern crate alloc;
+use alloc::vec::Vec;
 
 use core::panic::PanicInfo;
-use bootloader_api::{entry_point, BootInfo};
+use core::alloc::Layout;
+use bootloader_api::{config, entry_point, BootInfo, BootloaderConfig};
+use x86_64::structures::paging::OffsetPageTable;
+use x86_64::{
+    structures::paging::PageTable,
+    VirtAddr,
+};
 
 mod kernel;
 mod hal;
 mod libs;
 mod logger;
+mod k_init;
+mod k_main;
 
-use kernel::tty::tty;
-use kernel::asm::x86::{gdt, idt};
 use hal::cpu;
+const CONFIG: BootloaderConfig = {
+    let mut config = BootloaderConfig::new_default();
+    config.mappings.physical_memory = Some(config::Mapping::Dynamic);
+    config
+};
+
+entry_point!(k_init::kernel_init, config = &CONFIG);
 
 
-entry_point!(kernel_main);
-
-fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
-        tty::init(framebuffer);
-        tty::clear(0x000000);
-
-        kprintln!("CureOS Booting...");
-        kprintln!("Framebuffer initialized");
-
-        kprintln!("Initializing GDT...");
-        gdt::init();
-        kprintln!("GDT initialized");
-        gdt::print_info();
-        kprintln!();
-
-        kprintln!("Initializing IDT...");
-        idt::init();
-        kprintln!("IDT initialized");
-        idt::print_info();
-        kprintln!();
-
-        kprintln!("Welcome to CureOS!");
-
-        let mut brand_buf = [0u8; 64];
-        let mut model_buf = [0u8; 16];
-        kprintln!("CPU: {} ({})",
-            cpu::cpu_get_brand(&mut brand_buf),
-            cpu::cpu_get_model(&mut model_buf)
-        );
-
-        kprintln!();
-        kprintln!("Control Registers:");
-        kprintln!("  CR0: 0x{:016x}", hal::cpu::cpu_r_cr0().bits());
-        kprintln!("  CR2: 0x{:016x}", hal::cpu::cpu_r_cr2());
-        kprintln!("  CR3: 0x{:016x}", hal::cpu::cpu_r_cr3());
-        kprintln!("  CR4: 0x{:016x}", hal::cpu::cpu_r_cr4().bits());
-
-        kprintln!();
-        kprintln!("Kernel initialized successfully!");
-
-    } else {
-        loop {
-            hal::cpu::cpu_halt();
-        }
-    }
-
-    loop {
-        hal::cpu::cpu_halt();
-    }
-}
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
@@ -78,6 +43,12 @@ fn panic(info: &PanicInfo) -> ! {
     kprintln!("{}", info);
 
     loop {
-        hal::cpu::cpu_halt();
+        cpu::cpu_halt();
     }
+}
+
+#[cfg(not(test))]
+#[alloc_error_handler]
+fn alloc_error_handler(layout: Layout) -> ! {
+    panic!("Allocation error: {:?}", layout)
 }

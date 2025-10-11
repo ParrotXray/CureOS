@@ -48,8 +48,6 @@ pub struct SgReg {
     pub cs: Reg16,
 }
 
-// ============ 控制寄存器 ============
-
 /// 讀取 CR0 暫存器
 #[allow(dead_code)]
 #[inline]
@@ -180,8 +178,6 @@ pub fn cpu_get_brand(brand_out: &mut [u8]) -> &str {
         "Unknown CPU"
     }
 }
-
-// ============ CPU 指令 ============
 
 /// 讀取 CPU 時間戳計數器 (TSC)
 ///

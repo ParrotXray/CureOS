@@ -8,8 +8,10 @@ bootloader_api = "0.11.12"
 lazy_static = { version = "1.5.0", features = ["spin_no_std"] }
 x86_64 = { version = "0.15.2", features = ["instructions"] }
 spin = "0.10.0"
-raw-cpuid = "10.7.0"
+raw-cpuid = "11.6.0"
+acpi = "6.0.1"
+linked_list_allocator = "0.10.5"
 
-[package.metadata.bootloader]
-map-physical-memory = true
-physical-memory-offset = "0xFFFF800000000000"
+#[package.metadata.bootloader]
+#map-physical-memory = true
+#physical-memory-offset = "0xFFFF800000000000"
