@@ -12,7 +12,8 @@ mod libs;
 mod logger;
 
 use kernel::tty::tty;
-use kernel::asm::x86::gdt;
+use kernel::asm::x86::{gdt, idt};
+use hal::cpu;
 
 
 entry_point!(kernel_main);
@@ -24,15 +25,37 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
         kprintln!("CureOS Booting...");
         kprintln!("Framebuffer initialized");
-        kprintln!("Initializing GDT...");
 
+        kprintln!("Initializing GDT...");
         gdt::init();
         kprintln!("GDT initialized");
-
         gdt::print_info();
+        kprintln!();
+
+        kprintln!("Initializing IDT...");
+        idt::init();
+        kprintln!("IDT initialized");
+        idt::print_info();
+        kprintln!();
+
+        kprintln!("Welcome to CureOS!");
+
+        let mut brand_buf = [0u8; 64];
+        let mut model_buf = [0u8; 16];
+        kprintln!("CPU: {} ({})",
+            cpu::cpu_get_brand(&mut brand_buf),
+            cpu::cpu_get_model(&mut model_buf)
+        );
 
         kprintln!();
-        kprintln!("Welcome to CureOS!");
+        kprintln!("Control Registers:");
+        kprintln!("  CR0: 0x{:016x}", hal::cpu::cpu_r_cr0().bits());
+        kprintln!("  CR2: 0x{:016x}", hal::cpu::cpu_r_cr2());
+        kprintln!("  CR3: 0x{:016x}", hal::cpu::cpu_r_cr3());
+        kprintln!("  CR4: 0x{:016x}", hal::cpu::cpu_r_cr4().bits());
+
+        kprintln!();
+        kprintln!("Kernel initialized successfully!");
 
     } else {
         loop {

@@ -8,7 +8,6 @@ edition = "2021"
 [build-dependencies]
 bootloader = "0.11.12"
 
-# artifact dependency - 指定 kernel 的 target
 [build-dependencies.cure-kernel]
 path = "../kernel"
 artifact = "bin"
