@@ -1,17 +1,29 @@
-// kernel/src/gdt.rs
+// kernel/src/kernel/asm/x86/gdt.rs
 use x86_64::structures::gdt::{GlobalDescriptorTable, Descriptor, SegmentSelector};
 use x86_64::structures::tss::TaskStateSegment;
+use x86_64::instructions::segmentation::{Segment, CS, DS, ES, SS};
+use x86_64::instructions::tables::load_tss;
 use x86_64::VirtAddr;
 use lazy_static::lazy_static;
+use crate::kprintln;
 
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 
-// === 步驟 1: 創建 TSS ===
 lazy_static! {
     static ref TSS: TaskStateSegment = {
         let mut tss = TaskStateSegment::new();
 
         tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
+            const STACK_SIZE: usize = 4096 * 5;  // 20KB
+            static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+
+            let stack_start = VirtAddr::new(unsafe { &raw const STACK as *const _ as u64 });
+            let stack_end = stack_start + STACK_SIZE as u64;
+
+            stack_end
+        };
+
+        tss.privilege_stack_table[0] = {
             const STACK_SIZE: usize = 4096 * 5;  // 20KB
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
@@ -30,35 +42,88 @@ lazy_static! {
     static ref GDT: (GlobalDescriptorTable, Selectors) = {
         let mut gdt = GlobalDescriptorTable::new();
 
-        let code_selector = gdt.append(Descriptor::kernel_code_segment());
-        let data_selector = gdt.append(Descriptor::kernel_data_segment());
+        // 0x00: Null
+
+        // 0x08 ring 0
+        let kernel_code_selector = gdt.append(Descriptor::kernel_code_segment());
+
+        // 0x10 ring 0
+        let kernel_data_selector = gdt.append(Descriptor::kernel_data_segment());
+
+        // 0x18 ring 3
+        let user_code_selector = gdt.append(Descriptor::user_code_segment());
+
+        // 0x20 ring 3
+        let user_data_selector = gdt.append(Descriptor::user_data_segment());
+
+        // 0x28 Task seg
         let tss_selector = gdt.append(Descriptor::tss_segment(&TSS));
 
         (
             gdt,
             Selectors {
-                code_selector,
-                data_selector,
+                kernel_code_selector,
+                kernel_data_selector,
+                user_code_selector,
+                user_data_selector,
                 tss_selector,
             },
         )
     };
 }
 
-struct Selectors {
-    code_selector: SegmentSelector,
-    data_selector: SegmentSelector,
-    tss_selector: SegmentSelector,
+#[derive(Debug, Clone, Copy)]
+pub struct Selectors {
+    pub kernel_code_selector: SegmentSelector,
+    pub kernel_data_selector: SegmentSelector,
+    pub user_code_selector: SegmentSelector,
+    pub user_data_selector: SegmentSelector,
+    pub tss_selector: SegmentSelector,
 }
 
-pub fn init() {
-    use x86_64::instructions::segmentation::{Segment, CS};
-    use x86_64::instructions::tables::load_tss;
+pub fn get_selectors() -> Selectors {
+    GDT.1
+}
 
+pub fn user_code_selector() -> SegmentSelector {
+    GDT.1.user_code_selector
+}
+
+pub fn user_data_selector() -> SegmentSelector {
+    GDT.1.user_data_selector
+}
+
+pub fn kernel_code_selector() -> SegmentSelector {
+    GDT.1.kernel_code_selector
+}
+
+pub fn kernel_data_selector() -> SegmentSelector {
+    GDT.1.kernel_data_selector
+}
+
+// 初始化 GDT
+pub fn init() {
     GDT.0.load();
 
     unsafe {
-        CS::set_reg(GDT.1.code_selector);
+        CS::set_reg(GDT.1.kernel_code_selector);
+
+        DS::set_reg(GDT.1.kernel_data_selector);
+        ES::set_reg(GDT.1.kernel_data_selector);
+        SS::set_reg(GDT.1.kernel_data_selector);
+
+        // 加載 TSS
         load_tss(GDT.1.tss_selector);
     }
+}
+
+pub fn print_info() {
+    let selectors = get_selectors();
+
+    kprintln!("GDT Information:");
+    kprintln!("  Kernel Code: {:#x} (ring 0)", selectors.kernel_code_selector.0);
+    kprintln!("  Kernel Data: {:#x} (ring 0)", selectors.kernel_data_selector.0);
+    kprintln!("  User Code:   {:#x} (ring 3)", selectors.user_code_selector.0);
+    kprintln!("  User Data:   {:#x} (ring 3)", selectors.user_data_selector.0);
+    kprintln!("  TSS:         {:#x}", selectors.tss_selector.0);
 }

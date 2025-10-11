@@ -9,6 +9,7 @@ use bootloader_api::{entry_point, BootInfo};
 mod kernel;
 mod hal;
 mod libs;
+mod logger;
 
 use kernel::tty::tty;
 use kernel::asm::x86::gdt;
@@ -23,11 +24,15 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
         kprintln!("CureOS Booting...");
         kprintln!("Framebuffer initialized");
-        kprintln!("Welcome to CureOS!");
+        kprintln!("Initializing GDT...");
 
-        kprintln!("initialize GDT");
         gdt::init();
         kprintln!("GDT initialized");
+
+        gdt::print_info();
+
+        kprintln!();
+        kprintln!("Welcome to CureOS!");
 
     } else {
         loop {
