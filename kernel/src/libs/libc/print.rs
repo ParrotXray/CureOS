@@ -7,7 +7,7 @@ pub struct Writer;
 
 impl fmt::Write for Writer {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        tty::tty_put_str(s);
+        tty::tty_put_str(s, None);
         Ok(())
     }
 }
@@ -23,7 +23,11 @@ macro_rules! print {
 }
 
 #[macro_export]
-macro_rules! println {
-    () => ($crate::print!("\n"));
-    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
+macro_rules! kprintln {
+    () => {
+        $crate::libs::libc::print::_print(format_args!("\n"))
+    };
+    ($($arg:tt)*) => {
+        $crate::libs::libc::print::_print(format_args!("{}\n", format_args!($($arg)*)))
+    };
 }

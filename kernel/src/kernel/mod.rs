@@ -1,4 +1,3 @@
-pub mod kernel;
 pub mod tty;
 pub mod asm;
 

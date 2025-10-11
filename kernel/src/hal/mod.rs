@@ -10,7 +10,6 @@ pub use cpu::cpu_r_cr0;
 pub use cpu::cpu_r_cr2;
 pub use cpu::cpu_r_cr3;
 pub use cpu::cpu_w_cr0;
-pub use cpu::cpu_w_cr2;
 pub use cpu::cpu_w_cr3;
 pub use cpu::cpu_get_model;
 pub use cpu::cpu_brand_string_supported;
