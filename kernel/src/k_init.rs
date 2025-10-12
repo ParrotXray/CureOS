@@ -1,3 +1,4 @@
+// kernel/src/k_init.rs (Updated with Logger)
 use bootloader_api::BootInfo;
 use x86_64::structures::paging::OffsetPageTable;
 use x86_64::VirtAddr;
@@ -6,6 +7,18 @@ use crate::kernel::mm::{heap, frame_allocator};
 use crate::kernel::tty::tty;
 use crate::kprintln;
 use crate::k_main;
+use crate::logger::{init as logger_init, LoggerConfig, LogLevel};
+use crate::{log_trace, log_debug, log_info, log_warn, log_error};
+
+fn _logger_init() {
+    logger_init(
+        LoggerConfig::new()
+            .with_level(LogLevel::Trace)
+            .with_location(true)
+    );
+
+    log_info!("Logger initialized");
+}
 
 fn _critical_init() {
     gdt::init();
@@ -43,19 +56,19 @@ fn _display_init(framebuffer: &'static mut bootloader_api::info::FrameBuffer) {
 }
 
 fn _boot_report(memory_regions: &bootloader_api::info::MemoryRegions, physical_memory_offset: u64) {
-    kprintln!("[INIT] Stage 1: Critical Hardware");
-    kprintln!("  [OK] GDT initialized");
+    log_info!("Stage 1: Critical Hardware");
+    log_info!("GDT initialized");
     gdt::print_info();
 
     kprintln!();
-    kprintln!("  [OK] IDT initialized");
+    log_info!("IDT initialized");
     idt::print_info();
 
     kprintln!();
-    kprintln!("[INIT] Stage 2: Memory Management");
-    kprintln!("  [OK] Physical Memory Offset: {:#x}", physical_memory_offset);
+    log_info!("Stage 2: Memory Management");
+    log_info!("Physical Memory Offset: {:#x}", physical_memory_offset);
 
-    kprintln!("  [OK] Memory Regions:");
+    log_debug!("Memory Regions:");
     let mut total_usable = 0u64;
     for region in memory_regions.iter() {
         use bootloader_api::info::MemoryRegionKind;
@@ -69,43 +82,42 @@ fn _boot_report(memory_regions: &bootloader_api::info::MemoryRegions, physical_m
             MemoryRegionKind::UnknownUefi(_) => "UEFI Reserved",
             _ => "Reserved",
         };
-        kprintln!("    {:#016x} - {:#016x} ({})",
+        log_trace!("{:#016x} - {:#016x} ({})",
             region.start, region.end, kind_str);
     }
-    kprintln!("  [INFO] Total Usable Memory: {} MiB", total_usable / (1024 * 1024));
+    log_info!("Total Usable Memory: {} MiB", total_usable / (1024 * 1024));
 
     kprintln!();
-    kprintln!("[INIT] Stage 3: Heap Allocator");
-    kprintln!("  [OK] Heap Start: {:#x}", heap::HEAP_START);
-    kprintln!("  [OK] Heap Size:  {} KiB", heap::HEAP_SIZE / 1024);
+    log_info!("Stage 3: Heap Allocator");
+    log_info!("Heap Start: {:#x}", heap::HEAP_START);
+    log_info!("Heap Size:  {} KiB", heap::HEAP_SIZE / 1024);
 }
 
 fn _acpi_init(rsdp_addr: Option<u64>, physical_memory_offset: u64) {
     kprintln!();
-    kprintln!("[INIT] Stage 4: ACPI");
+    log_info!("Stage 4: ACPI");
 
     if let Some(rsdp) = rsdp_addr {
-        kprintln!("  [INFO] RSDP Address: {:#x}", rsdp);
+        log_debug!("RSDP Address: {:#x}", rsdp);
 
         if let Some(acpi_info) = acpi::init(rsdp, physical_memory_offset) {
             acpi::print_info(&acpi_info);
         } else {
-            kprintln!("  [WARN] ACPI initialization failed");
+            log_warn!("ACPI initialization failed");
         }
     } else {
-        kprintln!("  [WARN] RSDP not provided by bootloader");
+        log_warn!("RSDP not provided by bootloader");
     }
 }
 
 fn _post_init() {
     kprintln!();
-    kprintln!("[INIT] Stage 5: Post Initialization");
+    log_info!("Post Initialization");
     // TODO: 釋放 bootloader 佔用的內存
     // TODO: 釋放初始化代碼段（.init 段）
-    kprintln!("  [INFO] Cleanup completed");
+    log_debug!("Cleanup completed");
 }
 
-/// 主初始化入口
 pub fn kernel_init(boot_info: &'static mut BootInfo) -> ! {
     if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
 
@@ -125,6 +137,8 @@ pub fn kernel_init(boot_info: &'static mut BootInfo) -> ! {
 
         _display_init(framebuffer);
 
+        _logger_init();
+
         _boot_report(&boot_info.memory_regions, physical_memory_offset);
 
         _acpi_init(rsdp_addr, physical_memory_offset);
@@ -133,7 +147,7 @@ pub fn kernel_init(boot_info: &'static mut BootInfo) -> ! {
 
         kprintln!();
         kprintln!("========================================");
-        kprintln!("  Kernel Initialization Complete!");
+        kprintln!("  Kernel Initialization Complete!       ");
         kprintln!("========================================");
         kprintln!();
 
@@ -146,6 +160,7 @@ pub fn kernel_init(boot_info: &'static mut BootInfo) -> ! {
 
 #[allow(dead_code)]
 pub fn kernel_emergency_cleanup() {
+    log_error!("Emergency cleanup triggered");
     // 在 panic 前調用，做最後的清理工作
     // 比如刷新緩衝區、保存日誌等
 }
