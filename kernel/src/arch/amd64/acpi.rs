@@ -5,6 +5,7 @@ use acpi::rsdp::Rsdp;
 use core::ptr::NonNull;
 use core::mem;
 use crate::kprintln;
+use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
 
 #[derive(Clone, Copy)]
 pub struct CureAcpiHandler {
@@ -202,100 +203,95 @@ pub fn init(rsdp_addr: u64, physical_memory_offset: u64) -> Option<AcpiInfo> {
         handler.map_physical_region::<Rsdp>(rsdp_addr as usize, mem::size_of::<Rsdp>())
     };
     let revision = rsdp_mapping.revision();
-    kprintln!("  ACPI Revision: {}", revision);
+    log_info!("ACPI Revision: {}", revision);
 
     let tables = unsafe {
         match AcpiTables::from_rsdp(handler, rsdp_addr as usize) {
             Ok(tables) => tables,
             Err(e) => {
-                kprintln!("   Failed to parse ACPI tables: {:?}", e);
+                log_error!("Failed to parse ACPI tables: {:?}", e);
                 return None;
             }
         }
     };
     // kprintln!("  ACPI Revision: {}", tables.rsdp_revision);
-    
+
     let platform = match AcpiPlatform::new(tables, handler) {
         Ok(platform) => platform,
         Err(e) => {
-            kprintln!("   Failed to create ACPI platform: {:?}", e);
+            log_error!("Failed to create ACPI platform: {:?}", e);
             return None;
         }
     };
 
-    kprintln!("  Platform Info:");
-    kprintln!("    Power Profile: {:?}", platform.power_profile);
+    log_info!("Power Profile: {:?}", platform.power_profile);
 
     let (boot_processor, cpu_count) = if let Some(proc_info) = &platform.processor_info {
         let boot_proc = Some(proc_info.boot_processor.processor_uid);
         let cpu_cnt = proc_info.application_processors.len() + 1;
 
-        kprintln!("    Boot Processor UID: {:?}", boot_proc);
-        kprintln!("    Total CPU Count: {}", cpu_cnt);
+        log_info!("Boot Processor UID: {:?}", boot_proc);
+        log_info!("Total CPU Count: {}", cpu_cnt);
 
         (boot_proc, cpu_cnt)
     } else {
-        kprintln!("     No processor info found");
+        log_warn!("No processor info found");
         (None, 0)
     };
 
     // 檢查中斷模型
     let has_apic = match &platform.interrupt_model {
         InterruptModel::Apic(apic) => {
-            kprintln!("    Interrupt Model: APIC");
-            kprintln!("      Local APIC Address: {:#x}", apic.local_apic_address);
-            kprintln!("      IO APICs: {} controller(s)", apic.io_apics.len());
+            log_info!("Local APIC Address: {:#x}", apic.local_apic_address);
+            log_info!("IO APICs: {} controller(s)", apic.io_apics.len());
 
             for (i, io_apic) in apic.io_apics.iter().enumerate() {
-                kprintln!("        IO APIC {}: ID={}, Address={:#x}, GSI Base={}",
+                log_info!("IO APIC {}: ID={}, Address={:#x}, GSI Base={}",
                     i, io_apic.id, io_apic.address, io_apic.global_system_interrupt_base);
             }
 
             true
         }
         InterruptModel::Unknown => {
-            kprintln!("    Interrupt Model: Unknown (not APIC)");
+            log_warn!("Interrupt Model: Unknown (not APIC)");
             false
         }
         _ => {
-            kprintln!("    Interrupt Model: Other");
+            log_warn!("Interrupt Model: Other");
             false
         }
     };
 
-    // 檢查 HPET (High Precision Event Timer)
     let has_hpet = match HpetInfo::new(&platform.tables) {
         Ok(hpet) => {
-            kprintln!("  HPET (High Precision Event Timer):");
-            kprintln!("    Base Address: {:#x}", hpet.base_address);
-            kprintln!("    Hardware Rev: {}", hpet.hardware_rev);
-            kprintln!("    Comparator Count: {}", hpet.num_comparators);
-            kprintln!("    Counter Size: {} bit", if hpet.main_counter_is_64bits { 64 } else { 32 });
-            kprintln!("    Legacy IRQ Capable: {}", hpet.legacy_irq_capable);
-            kprintln!("    PCI Vendor ID: {:#x}", hpet.pci_vendor_id);
+            log_info!("Base Address: {:#x}", hpet.base_address);
+            log_info!("Hardware Rev: {}", hpet.hardware_rev);
+            log_info!("Comparator Count: {}", hpet.num_comparators);
+            log_info!("Counter Size: {} bit", if hpet.main_counter_is_64bits { 64 } else { 32 });
+            log_info!("Legacy IRQ Capable: {}", hpet.legacy_irq_capable);
+            log_info!("PCI Vendor ID: {:#x}", hpet.pci_vendor_id);
             true
         }
         Err(_) => {
-            kprintln!("  HPET: Not available");
+            log_warn!("HPET: Not available");
             false
         }
     };
 
     if let Ok(mcfg) = PciConfigRegions::new(&platform.tables) {
-        kprintln!("  PCI Express Configuration:");
         for (i, entry) in mcfg.regions.iter().enumerate() {
             let segment_group = entry.pci_segment_group;
             let base_addr = entry.base_address;
             let bus_start = entry.bus_number_start;
             let bus_end = entry.bus_number_end;
 
-            kprintln!("    Entry {}: Segment Group {}", i, segment_group);
-            kprintln!("      Base Address: {:#x}", base_addr);
-            kprintln!("      Bus Range: {}-{}", bus_start, bus_end);
+            log_info!("Entry {}: Segment Group {}", i, segment_group);
+            log_info!("Base Address: {:#x}", base_addr);
+            log_info!("Bus Range: {}-{}", bus_start, bus_end);
         }
     }
 
-    kprintln!(" ACPI initialized successfully!");
+    log_info!("ACPI initialized successfully!");
 
     Some(AcpiInfo {
         revision,
@@ -308,12 +304,11 @@ pub fn init(rsdp_addr: u64, physical_memory_offset: u64) -> Option<AcpiInfo> {
 
 pub fn print_info(info: &AcpiInfo) {
     kprintln!();
-    kprintln!("ACPI Summary:");
-    kprintln!("  Revision: ACPI {}.0", info.revision);
-    kprintln!("  CPUs: {} processor(s)", info.cpu_count);
+    log_info!("Revision: ACPI {}.0", info.revision);
+    log_info!("CPUs: {} processor(s)", info.cpu_count);
     if let Some(boot_proc) = info.boot_processor {
-        kprintln!("  Boot Processor: UID {}", boot_proc);
+        log_info!("Boot Processor: UID {}", boot_proc);
     }
-    kprintln!("  APIC: {}", if info.has_apic { "Available " } else { "Not available" });
-    kprintln!("  HPET: {}", if info.has_hpet { "Available " } else { "Not available" });
+    log_info!("APIC: {}", if info.has_apic { "Available " } else { "Not available" });
+    log_info!("HPET: {}", if info.has_hpet { "Available " } else { "Not available" });
 }

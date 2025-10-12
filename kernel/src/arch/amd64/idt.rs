@@ -1,8 +1,9 @@
-// kernel/src/kernel/asm/x86/idt.rs
+// kernel/src/kernel/asm/amd64/idt.rs
 use x86_64::structures::idt::{InterruptDescriptorTable};
 use lazy_static::lazy_static;
 use crate::kprintln;
-use super::interrupt::*;
+use super::isr::*;
+use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
@@ -20,7 +21,7 @@ lazy_static! {
         unsafe {
             idt.double_fault
                 .set_handler_fn(double_fault_handler)
-                .set_stack_index(crate::kernel::asm::x86::gdt::DOUBLE_FAULT_IST_INDEX);
+                .set_stack_index(super::gdt::DOUBLE_FAULT_IST_INDEX);
         }
 
         idt.invalid_tss.set_handler_fn(invalid_tss_handler);
@@ -43,7 +44,6 @@ pub fn init() {
 }
 
 pub fn print_info() {
-    kprintln!("IDT Information:");
-    kprintln!("  IDT loaded and active");
-    kprintln!("  Exception handlers registered");
+    log_info!("  IDT loaded and active");
+    log_info!("  Exception handlers registered");
 }

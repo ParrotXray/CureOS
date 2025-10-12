@@ -15,12 +15,13 @@ use x86_64::{
     VirtAddr,
 };
 
-mod kernel;
 mod hal;
 mod libs;
-mod logger;
 mod k_init;
 mod k_main;
+pub mod arch;
+pub mod mm;
+pub mod tty;
 
 use hal::cpu;
 const CONFIG: BootloaderConfig = {
@@ -29,7 +30,7 @@ const CONFIG: BootloaderConfig = {
     config
 };
 
-entry_point!(k_init::kernel_init, config = &CONFIG);
+entry_point!(k_init::_kernel_init, config = &CONFIG);
 
 
 #[cfg(not(test))]
@@ -40,14 +41,13 @@ fn panic(info: &PanicInfo) -> ! {
     kprintln!("       KERNEL PANIC!"            );
     kprintln!("================================");
     kprintln!();
-    kprintln!("{}", info);
+    log_fatal!("{}", info);
     kprintln!();
-    kprintln!("Control Registers:");
-    kprintln!("  CR0: 0x{:016x}", cpu::cpu_r_cr0().bits());
-    kprintln!("  CR2: 0x{:016x}", cpu::cpu_r_cr2());
-    kprintln!("  CR3: 0x{:016x}", cpu::cpu_r_cr3());
-    kprintln!("  CR4: 0x{:016x}", cpu::cpu_r_cr4().bits());
-    
+    log_fatal!("  CR0: 0x{:016x}", cpu::cpu_r_cr0().bits());
+    log_fatal!("  CR2: 0x{:016x}", cpu::cpu_r_cr2());
+    log_fatal!("  CR3: 0x{:016x}", cpu::cpu_r_cr3());
+    log_fatal!("  CR4: 0x{:016x}", cpu::cpu_r_cr4().bits());
+
     loop {
         cpu::cpu_halt();
     }

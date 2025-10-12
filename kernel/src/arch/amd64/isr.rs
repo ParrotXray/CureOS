@@ -1,12 +1,13 @@
-// kernel/src/kernel/asm/x86/interrupt.rs
+// kernel/src/kernel/asm/amd64/isr
 use x86_64::structures::idt::{InterruptStackFrame, PageFaultErrorCode};
 use crate::kprintln;
+use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
 
 /// Divide Error (#DE)
 pub extern "x86-interrupt" fn divide_error_handler(stack_frame: InterruptStackFrame) {
     kprintln!();
-    kprintln!("EXCEPTION: DIVIDE ERROR (#DE)");
-    kprintln!("{:#?}", stack_frame);
+    log_error!("EXCEPTION: DIVIDE ERROR (#DE)");
+    log_error!("{:#?}", stack_frame);
     loop {
         crate::hal::cpu::cpu_halt();
     }
@@ -15,29 +16,29 @@ pub extern "x86-interrupt" fn divide_error_handler(stack_frame: InterruptStackFr
 /// Debug Exception (#DB)
 pub extern "x86-interrupt" fn debug_handler(stack_frame: InterruptStackFrame) {
     kprintln!();
-    kprintln!("EXCEPTION: DEBUG (#DB)");
-    kprintln!("{:#?}", stack_frame);
+    log_debug!("EXCEPTION: DEBUG (#DB)");
+    log_debug!("{:#?}", stack_frame);
 }
 
 /// Non-Maskable Interrupt (NMI)
 pub extern "x86-interrupt" fn nmi_handler(stack_frame: InterruptStackFrame) {
     kprintln!();
-    kprintln!("EXCEPTION: NON-MASKABLE INTERRUPT (NMI)");
-    kprintln!("{:#?}", stack_frame);
+    log_fatal!("EXCEPTION: NON-MASKABLE INTERRUPT (NMI)");
+    log_fatal!("{:#?}", stack_frame);
 }
 
 /// Breakpoint (#BP)
 pub extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
     kprintln!();
-    kprintln!("EXCEPTION: BREAKPOINT (#BP)");
-    kprintln!("{:#?}", stack_frame);
+    log_debug!("EXCEPTION: BREAKPOINT (#BP)");
+    log_debug!("{:#?}", stack_frame);
 }
 
 /// Overflow (#OF)
 pub extern "x86-interrupt" fn overflow_handler(stack_frame: InterruptStackFrame) {
     kprintln!();
-    kprintln!("EXCEPTION: OVERFLOW (#OF)");
-    kprintln!("{:#?}", stack_frame);
+    log_error!("EXCEPTION: OVERFLOW (#OF)");
+    log_error!("{:#?}", stack_frame);
     loop {
         crate::hal::cpu::cpu_halt();
     }
@@ -46,8 +47,8 @@ pub extern "x86-interrupt" fn overflow_handler(stack_frame: InterruptStackFrame)
 /// Bound Range Exceeded (#BR)
 pub extern "x86-interrupt" fn bound_range_handler(stack_frame: InterruptStackFrame) {
     kprintln!();
-    kprintln!("EXCEPTION: BOUND RANGE EXCEEDED (#BR)");
-    kprintln!("{:#?}", stack_frame);
+    log_error!("EXCEPTION: BOUND RANGE EXCEEDED (#BR)");
+    log_error!("{:#?}", stack_frame);
     loop {
         crate::hal::cpu::cpu_halt();
     }
@@ -56,8 +57,8 @@ pub extern "x86-interrupt" fn bound_range_handler(stack_frame: InterruptStackFra
 /// Invalid Opcode (#UD)
 pub extern "x86-interrupt" fn invalid_opcode_handler(stack_frame: InterruptStackFrame) {
     kprintln!();
-    kprintln!("EXCEPTION: INVALID OPCODE (#UD)");
-    kprintln!("{:#?}", stack_frame);
+    log_error!("EXCEPTION: INVALID OPCODE (#UD)");
+    log_error!("{:#?}", stack_frame);
     loop {
         crate::hal::cpu::cpu_halt();
     }
@@ -66,8 +67,8 @@ pub extern "x86-interrupt" fn invalid_opcode_handler(stack_frame: InterruptStack
 /// Device Not Available (#NM)
 pub extern "x86-interrupt" fn device_not_available_handler(stack_frame: InterruptStackFrame) {
     kprintln!();
-    kprintln!("EXCEPTION: DEVICE NOT AVAILABLE (#NM)");
-    kprintln!("{:#?}", stack_frame);
+    log_error!("EXCEPTION: DEVICE NOT AVAILABLE (#NM)");
+    log_error!("{:#?}", stack_frame);
     loop {
         crate::hal::cpu::cpu_halt();
     }
@@ -78,7 +79,11 @@ pub extern "x86-interrupt" fn double_fault_handler(
     stack_frame: InterruptStackFrame,
     error_code: u64,
 ) -> ! {
-    panic!("EXCEPTION: DOUBLE FAULT (#DF)\nError Code: {}\n{:#?}", error_code, stack_frame);
+    kprintln!();
+    log_fatal!("EXCEPTION: DOUBLE FAULT (#DF)");
+    log_fatal!("Error Code: {:#x}", error_code);
+    log_fatal!("{:#?}", stack_frame);
+    panic!("DOUBLE FAULT - System cannot continue");
 }
 
 /// Invalid TSS (#TS)
@@ -87,9 +92,9 @@ pub extern "x86-interrupt" fn invalid_tss_handler(
     error_code: u64,
 ) {
     kprintln!();
-    kprintln!("EXCEPTION: INVALID TSS (#TS)");
-    kprintln!("Error Code: {:#x}", error_code);
-    kprintln!("{:#?}", stack_frame);
+    log_fatal!("EXCEPTION: INVALID TSS (#TS)");
+    log_fatal!("Error Code: {:#x}", error_code);
+    log_fatal!("{:#?}", stack_frame);
     loop {
         crate::hal::cpu::cpu_halt();
     }
@@ -101,9 +106,9 @@ pub extern "x86-interrupt" fn segment_not_present_handler(
     error_code: u64,
 ) {
     kprintln!();
-    kprintln!("EXCEPTION: SEGMENT NOT PRESENT (#NP)");
-    kprintln!("Error Code: {:#x}", error_code);
-    kprintln!("{:#?}", stack_frame);
+    log_fatal!("EXCEPTION: SEGMENT NOT PRESENT (#NP)");
+    log_fatal!("Error Code: {:#x}", error_code);
+    log_fatal!("{:#?}", stack_frame);
     loop {
         crate::hal::cpu::cpu_halt();
     }
@@ -115,9 +120,9 @@ pub extern "x86-interrupt" fn stack_segment_fault_handler(
     error_code: u64,
 ) {
     kprintln!();
-    kprintln!("EXCEPTION: STACK SEGMENT FAULT (#SS)");
-    kprintln!("Error Code: {:#x}", error_code);
-    kprintln!("{:#?}", stack_frame);
+    log_fatal!("EXCEPTION: STACK SEGMENT FAULT (#SS)");
+    log_fatal!("Error Code: {:#x}", error_code);
+    log_fatal!("{:#?}", stack_frame);
     loop {
         crate::hal::cpu::cpu_halt();
     }
@@ -129,9 +134,9 @@ pub extern "x86-interrupt" fn general_protection_fault_handler(
     error_code: u64,
 ) {
     kprintln!();
-    kprintln!("EXCEPTION: GENERAL PROTECTION FAULT (#GP)");
-    kprintln!("Error Code: {:#x}", error_code);
-    kprintln!("{:#?}", stack_frame);
+    log_fatal!("EXCEPTION: GENERAL PROTECTION FAULT (#GP)");
+    log_fatal!("Error Code: {:#x}", error_code);
+    log_fatal!("{:#?}", stack_frame);
     loop {
         crate::hal::cpu::cpu_halt();
     }
@@ -145,15 +150,15 @@ pub extern "x86-interrupt" fn page_fault_handler(
     use x86_64::registers::control::Cr2;
 
     kprintln!();
-    kprintln!("EXCEPTION: PAGE FAULT (#PF)");
-    kprintln!("Accessed Address: {:?}", Cr2::read());
-    kprintln!("Error Code: {:?}", error_code);
-    kprintln!("  - Present: {}", error_code.contains(PageFaultErrorCode::PROTECTION_VIOLATION));
-    kprintln!("  - Write: {}", error_code.contains(PageFaultErrorCode::CAUSED_BY_WRITE));
-    kprintln!("  - User: {}", error_code.contains(PageFaultErrorCode::USER_MODE));
-    kprintln!("  - Reserved Write: {}", error_code.contains(PageFaultErrorCode::MALFORMED_TABLE));
-    kprintln!("  - Instruction Fetch: {}", error_code.contains(PageFaultErrorCode::INSTRUCTION_FETCH));
-    kprintln!("{:#?}", stack_frame);
+    log_fatal!("EXCEPTION: PAGE FAULT (#PF)");
+    log_fatal!("Accessed Address: {:?}", Cr2::read());
+    log_fatal!("Error Code: {:?}", error_code);
+    log_fatal!("Present: {}", error_code.contains(PageFaultErrorCode::PROTECTION_VIOLATION));
+    log_fatal!("Write: {}", error_code.contains(PageFaultErrorCode::CAUSED_BY_WRITE));
+    log_fatal!("User: {}", error_code.contains(PageFaultErrorCode::USER_MODE));
+    log_fatal!("Reserved Write: {}", error_code.contains(PageFaultErrorCode::MALFORMED_TABLE));
+    log_fatal!("Instruction Fetch: {}", error_code.contains(PageFaultErrorCode::INSTRUCTION_FETCH));
+    log_fatal!("{:#?}", stack_frame);
     loop {
         crate::hal::cpu::cpu_halt();
     }
@@ -162,8 +167,8 @@ pub extern "x86-interrupt" fn page_fault_handler(
 /// x87 Floating-Point Exception (#MF)
 pub extern "x86-interrupt" fn x87_floating_point_handler(stack_frame: InterruptStackFrame) {
     kprintln!();
-    kprintln!("EXCEPTION: x87 FLOATING POINT (#MF)");
-    kprintln!("{:#?}", stack_frame);
+    log_error!("EXCEPTION: x87 FLOATING POINT (#MF)");
+    log_error!("{:#?}", stack_frame);
     loop {
         crate::hal::cpu::cpu_halt();
     }
@@ -175,9 +180,9 @@ pub extern "x86-interrupt" fn alignment_check_handler(
     error_code: u64,
 ) {
     kprintln!();
-    kprintln!("EXCEPTION: ALIGNMENT CHECK (#AC)");
-    kprintln!("Error Code: {:#x}", error_code);
-    kprintln!("{:#?}", stack_frame);
+    log_error!("EXCEPTION: ALIGNMENT CHECK (#AC)");
+    log_error!("Error Code: {:#x}", error_code);
+    log_error!("{:#?}", stack_frame);
     loop {
         crate::hal::cpu::cpu_halt();
     }
@@ -185,7 +190,10 @@ pub extern "x86-interrupt" fn alignment_check_handler(
 
 /// Machine Check (#MC)
 pub extern "x86-interrupt" fn machine_check_handler(stack_frame: InterruptStackFrame) -> ! {
-    panic!("EXCEPTION: MACHINE CHECK (#MC)\n{:#?}", stack_frame);
+    kprintln!();
+    log_error!("EXCEPTION: MACHINE CHECK (#MC)");
+    log_error!("{:#?}", stack_frame);
+    panic!("MACHINE CHECK - System cannot continue");
 }
 
 /// SIMD Floating-Point Exception (#XM/#XF)
@@ -201,8 +209,8 @@ pub extern "x86-interrupt" fn simd_floating_point_handler(stack_frame: Interrupt
 /// Virtualization Exception (#VE)
 pub extern "x86-interrupt" fn virtualization_handler(stack_frame: InterruptStackFrame) {
     kprintln!();
-    kprintln!("EXCEPTION: VIRTUALIZATION (#VE)");
-    kprintln!("{:#?}", stack_frame);
+    log_warn!("EXCEPTION: VIRTUALIZATION (#VE)");
+    log_warn!("{:#?}", stack_frame);
     loop {
         crate::hal::cpu::cpu_halt();
     }

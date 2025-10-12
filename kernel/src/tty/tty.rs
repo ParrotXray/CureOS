@@ -1,5 +1,5 @@
 use bootloader_api::info::{FrameBuffer, FrameBufferInfo, PixelFormat};
-use crate::kernel::tty::font::FONT_BASIC;
+use crate::tty::font::FONT_BASIC;
 use spin::Mutex;
 
 pub struct TTYState {

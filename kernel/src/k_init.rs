@@ -2,12 +2,12 @@
 use bootloader_api::BootInfo;
 use x86_64::structures::paging::OffsetPageTable;
 use x86_64::VirtAddr;
-use crate::kernel::asm::x86::{gdt, idt, acpi};
-use crate::kernel::mm::{heap, frame_allocator};
-use crate::kernel::tty::tty;
+use crate::arch::amd64::{gdt, idt, acpi};
+use crate::mm::{heap, frame_allocator};
+use crate::tty::tty;
 use crate::kprintln;
 use crate::k_main;
-use crate::logger::{init as logger_init, LoggerConfig, LogLevel};
+use crate::libs::logger::{init as logger_init, LoggerConfig, LogLevel};
 use crate::{log_trace, log_debug, log_info, log_warn, log_error};
 
 fn _logger_init() {
@@ -56,7 +56,6 @@ fn _display_init(framebuffer: &'static mut bootloader_api::info::FrameBuffer) {
 }
 
 fn _boot_report(memory_regions: &bootloader_api::info::MemoryRegions, physical_memory_offset: u64) {
-    log_info!("Stage 1: Critical Hardware");
     log_info!("GDT initialized");
     gdt::print_info();
 
@@ -65,7 +64,6 @@ fn _boot_report(memory_regions: &bootloader_api::info::MemoryRegions, physical_m
     idt::print_info();
 
     kprintln!();
-    log_info!("Stage 2: Memory Management");
     log_info!("Physical Memory Offset: {:#x}", physical_memory_offset);
 
     log_debug!("Memory Regions:");
@@ -88,14 +86,12 @@ fn _boot_report(memory_regions: &bootloader_api::info::MemoryRegions, physical_m
     log_info!("Total Usable Memory: {} MiB", total_usable / (1024 * 1024));
 
     kprintln!();
-    log_info!("Stage 3: Heap Allocator");
     log_info!("Heap Start: {:#x}", heap::HEAP_START);
     log_info!("Heap Size:  {} KiB", heap::HEAP_SIZE / 1024);
 }
 
 fn _acpi_init(rsdp_addr: Option<u64>, physical_memory_offset: u64) {
     kprintln!();
-    log_info!("Stage 4: ACPI");
 
     if let Some(rsdp) = rsdp_addr {
         log_debug!("RSDP Address: {:#x}", rsdp);
@@ -114,11 +110,10 @@ fn _post_init() {
     kprintln!();
     log_info!("Post Initialization");
     // TODO: 釋放 bootloader 佔用的內存
-    // TODO: 釋放初始化代碼段（.init 段）
     log_debug!("Cleanup completed");
 }
 
-pub fn kernel_init(boot_info: &'static mut BootInfo) -> ! {
+pub fn _kernel_init(boot_info: &'static mut BootInfo) -> ! {
     if let Some(framebuffer) = boot_info.framebuffer.as_mut() {
 
         _critical_init();
@@ -151,7 +146,7 @@ pub fn kernel_init(boot_info: &'static mut BootInfo) -> ! {
         kprintln!("========================================");
         kprintln!();
 
-        k_main::kernel_main();
+        k_main::_kernel_main();
 
     } else {
         panic!("No framebuffer provided by bootloader");

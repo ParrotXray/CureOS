@@ -3,7 +3,7 @@ use crate::hal::cpu;
 use crate::kprintln;
 use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
 
-pub fn kernel_main() -> ! {
+pub fn _kernel_main() -> ! {
     kprintln!();
     kprintln!("=== Welcome to CureOS! ===");
     kprintln!();
@@ -16,7 +16,6 @@ pub fn kernel_main() -> ! {
     );
 
     kprintln!();
-    log_debug!("Control Registers:");
     log_debug!("CR0: 0x{:016x}", cpu::cpu_r_cr0().bits());
     log_debug!("CR2: 0x{:016x}", cpu::cpu_r_cr2());
     log_debug!("CR3: 0x{:016x}", cpu::cpu_r_cr3());

@@ -1,7 +1,7 @@
 // src/libs/libc/print.rs
 
 use core::fmt;
-use crate::kernel::tty::tty;
+use crate::tty::tty;
 
 pub struct Writer;
 
@@ -19,15 +19,15 @@ pub fn _print(args: fmt::Arguments) {
 
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => ($crate::libs::libc::print::_print(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::libs::print::_print(format_args!($($arg)*)));
 }
 
 #[macro_export]
 macro_rules! kprintln {
     () => {
-        $crate::libs::libc::print::_print(format_args!("\n"))
+        $crate::libs::print::_print(format_args!("\n"))
     };
     ($($arg:tt)*) => {
-        $crate::libs::libc::print::_print(format_args!("{}\n", format_args!($($arg)*)))
+        $crate::libs::print::_print(format_args!("{}\n", format_args!($($arg)*)))
     };
 }

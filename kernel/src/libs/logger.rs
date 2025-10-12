@@ -1,6 +1,6 @@
 // kernel/src/logger.rs
 use core::fmt;
-use crate::kernel::tty::tty;
+use crate::tty::tty;
 use spin::Mutex;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -158,8 +158,8 @@ fn fmt_to_buffer<'a>(buf: &'a mut [u8], args: fmt::Arguments) -> Result<&'a str,
 #[macro_export]
 macro_rules! log_trace {
     ($($arg:tt)*) => {
-        $crate::logger::_log(
-            $crate::logger::LogLevel::Trace,
+        $crate::libs::logger::_log(
+            $crate::libs::logger::LogLevel::Trace,
             format_args!($($arg)*),
             Some(file!()),
             Some(line!())
@@ -171,8 +171,8 @@ macro_rules! log_trace {
 #[macro_export]
 macro_rules! log_debug {
     ($($arg:tt)*) => {
-        $crate::logger::_log(
-            $crate::logger::LogLevel::Debug,
+        $crate::libs::logger::_log(
+            $crate::libs::logger::LogLevel::Debug,
             format_args!($($arg)*),
             Some(file!()),
             Some(line!())
@@ -184,8 +184,8 @@ macro_rules! log_debug {
 #[macro_export]
 macro_rules! log_info {
     ($($arg:tt)*) => {
-        $crate::logger::_log(
-            $crate::logger::LogLevel::Info,
+        $crate::libs::logger::_log(
+            $crate::libs::logger::LogLevel::Info,
             format_args!($($arg)*),
             Some(file!()),
             Some(line!())
@@ -197,8 +197,8 @@ macro_rules! log_info {
 #[macro_export]
 macro_rules! log_warn {
     ($($arg:tt)*) => {
-        $crate::logger::_log(
-            $crate::logger::LogLevel::Warn,
+        $crate::libs::logger::_log(
+            $crate::libs::logger::LogLevel::Warn,
             format_args!($($arg)*),
             Some(file!()),
             Some(line!())
@@ -210,8 +210,8 @@ macro_rules! log_warn {
 #[macro_export]
 macro_rules! log_error {
     ($($arg:tt)*) => {
-        $crate::logger::_log(
-            $crate::logger::LogLevel::Error,
+        $crate::libs::logger::_log(
+            $crate::libs::logger::LogLevel::Error,
             format_args!($($arg)*),
             Some(file!()),
             Some(line!())
@@ -223,8 +223,8 @@ macro_rules! log_error {
 #[macro_export]
 macro_rules! log_fatal {
     ($($arg:tt)*) => {
-        $crate::logger::_log(
-            $crate::logger::LogLevel::Fatal,
+        $crate::libs::logger::_log(
+            $crate::libs::logger::LogLevel::Fatal,
             format_args!($($arg)*),
             Some(file!()),
             Some(line!())
