@@ -17,11 +17,10 @@ use x86_64::{
 
 mod hal;
 mod libs;
-mod k_init;
-mod k_main;
 pub mod arch;
 pub mod mm;
 pub mod tty;
+pub mod kernel;
 
 use hal::cpu;
 const CONFIG: BootloaderConfig = {
@@ -30,8 +29,7 @@ const CONFIG: BootloaderConfig = {
     config
 };
 
-entry_point!(k_init::_kernel_init, config = &CONFIG);
-
+entry_point!(kernel::k_init::_kernel_init, config = &CONFIG);
 
 #[cfg(not(test))]
 #[panic_handler]
@@ -43,10 +41,10 @@ fn panic(info: &PanicInfo) -> ! {
     kprintln!();
     log_fatal!("{}", info);
     kprintln!();
-    log_fatal!("  CR0: 0x{:016x}", cpu::cpu_r_cr0().bits());
+    log_fatal!("  CR0: 0x{:016x}", cpu::cpu_r_cr0());
     log_fatal!("  CR2: 0x{:016x}", cpu::cpu_r_cr2());
     log_fatal!("  CR3: 0x{:016x}", cpu::cpu_r_cr3());
-    log_fatal!("  CR4: 0x{:016x}", cpu::cpu_r_cr4().bits());
+    log_fatal!("  CR4: 0x{:016x}", cpu::cpu_r_cr4());
 
     loop {
         cpu::cpu_halt();

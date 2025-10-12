@@ -16,10 +16,10 @@ pub fn _kernel_main() -> ! {
     );
 
     kprintln!();
-    log_debug!("CR0: 0x{:016x}", cpu::cpu_r_cr0().bits());
+    log_debug!("CR0: 0x{:016x}", cpu::cpu_r_cr0());
     log_debug!("CR2: 0x{:016x}", cpu::cpu_r_cr2());
     log_debug!("CR3: 0x{:016x}", cpu::cpu_r_cr3());
-    log_debug!("CR4: 0x{:016x}", cpu::cpu_r_cr4().bits());
+    log_debug!("CR4: 0x{:016x}", cpu::cpu_r_cr4());
 
     // kprintln!();
     // kprintln!("=== Logger Level Demonstration ===");

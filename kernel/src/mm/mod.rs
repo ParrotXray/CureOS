@@ -1,2 +1,3 @@
-pub mod frame_allocator;
-pub mod heap;
+pub mod allocator;
+pub mod paging;
+pub mod vmm;

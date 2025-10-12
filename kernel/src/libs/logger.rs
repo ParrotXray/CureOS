@@ -92,7 +92,6 @@ impl LoggerState {
         tty::write_str(level.tag(), level.color());
         tty::write_str(" ", 0xFFFFFF);
 
-        // 如果啟用位置信息
         if self.config.show_location {
             if let (Some(f), Some(l)) = (file, line) {
                 let mut location_buf = [0u8; 128];

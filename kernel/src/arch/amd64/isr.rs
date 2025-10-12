@@ -2,6 +2,7 @@
 use x86_64::structures::idt::{InterruptStackFrame, PageFaultErrorCode};
 use crate::kprintln;
 use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
+use crate::hal::cpu;
 
 /// Divide Error (#DE)
 pub extern "x86-interrupt" fn divide_error_handler(stack_frame: InterruptStackFrame) {
@@ -151,7 +152,7 @@ pub extern "x86-interrupt" fn page_fault_handler(
 
     kprintln!();
     log_fatal!("EXCEPTION: PAGE FAULT (#PF)");
-    log_fatal!("Accessed Address: {:?}", Cr2::read());
+    log_fatal!("Accessed Address: {:?}", cpu::cpu_r_cr2());
     log_fatal!("Error Code: {:?}", error_code);
     log_fatal!("Present: {}", error_code.contains(PageFaultErrorCode::PROTECTION_VIOLATION));
     log_fatal!("Write: {}", error_code.contains(PageFaultErrorCode::CAUSED_BY_WRITE));

@@ -61,7 +61,8 @@ pub fn init_heap(
 }
 
 pub unsafe fn get_level_4_table(physical_memory_offset: VirtAddr) -> &'static mut PageTable {
-    let virt = physical_memory_offset + cpu::cpu_r_cr3();
+    let phys =  cpu::cpu_r_cr3_addr().as_u64();
+    let virt = physical_memory_offset + phys;
     let page_table_ptr: *mut PageTable = virt.as_mut_ptr();
 
     &mut *page_table_ptr

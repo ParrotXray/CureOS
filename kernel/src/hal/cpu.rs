@@ -2,6 +2,7 @@
 use x86_64::registers::control::{Cr0, Cr0Flags, Cr2, Cr3, Cr4, Cr4Flags};
 use x86_64::instructions::{interrupts, hlt};
 use core::arch::asm;
+use x86_64::{PhysAddr, structures::paging::PhysFrame};
 use x86_64::VirtAddr;
 
 /// 64 位元暫存器類型
@@ -51,8 +52,8 @@ pub struct SgReg {
 /// 讀取 CR0 暫存器
 #[allow(dead_code)]
 #[inline]
-pub fn cpu_r_cr0() -> Cr0Flags {
-    Cr0::read()
+pub fn cpu_r_cr0() -> u64 {
+    Cr0::read_raw()
 }
 
 /// 讀取 CR2 暫存器
@@ -65,15 +66,34 @@ pub fn cpu_r_cr2() -> u64 {
 /// 讀取 CR3 暫存器
 #[allow(dead_code)]
 #[inline]
-pub fn cpu_r_cr3() -> u64 {
-    Cr3::read().0.start_address().as_u64()
+pub fn cpu_r_cr3_frame() -> PhysFrame {
+    Cr3::read_raw().0
 }
+
+#[allow(dead_code)]
+#[inline]
+pub fn cpu_r_cr3_flag() -> u16 {
+    Cr3::read_raw().1
+}
+
+#[allow(dead_code)]
+#[inline]
+pub fn cpu_r_cr3() -> u64 {
+    cpu_r_cr3_addr().as_u64()
+}
+
+#[allow(dead_code)]
+#[inline]
+pub fn cpu_r_cr3_addr() -> PhysAddr {
+    cpu_r_cr3_frame().start_address()
+}
+
 
 /// 讀取 CR4 暫存器
 #[allow(dead_code)]
 #[inline]
-pub fn cpu_r_cr4() -> Cr4Flags {
-    Cr4::read()
+pub fn cpu_r_cr4() -> u64 {
+    Cr4::read_raw()
 }
 
 /// 寫入 CR0 暫存器
@@ -87,8 +107,6 @@ pub fn cpu_w_cr0(val: Cr0Flags) {
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_w_cr3(val: u64) {
-    use x86_64::{PhysAddr, structures::paging::PhysFrame};
-
     let frame = PhysFrame::containing_address(PhysAddr::new(val));
     unsafe {
         Cr3::write(frame, Cr3::read().1);

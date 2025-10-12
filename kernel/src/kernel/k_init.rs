@@ -2,13 +2,14 @@
 use bootloader_api::BootInfo;
 use x86_64::structures::paging::OffsetPageTable;
 use x86_64::VirtAddr;
-use crate::arch::amd64::{gdt, idt, acpi};
-use crate::mm::{heap, frame_allocator};
+use crate::arch::amd64::{gdt, idt};
+use crate::mm::allocator::{heap, frame};
 use crate::tty::tty;
 use crate::kprintln;
-use crate::k_main;
-use crate::libs::logger::{init as logger_init, LoggerConfig, LogLevel};
-use crate::{log_trace, log_debug, log_info, log_warn, log_error};
+use crate::kernel::k_main;
+use crate::libs::logger::{init as logger_init, LogLevel, LoggerConfig};
+use crate::{log_debug, log_error, log_info, log_trace, log_warn};
+use crate::hal::acpi;
 
 fn _logger_init() {
     logger_init(
@@ -28,7 +29,7 @@ fn _critical_init() {
 fn _memory_init(
     memory_regions: &'static bootloader_api::info::MemoryRegions,
     physical_memory_offset: u64
-) -> (OffsetPageTable<'static>, frame_allocator::BootInfoFrameAllocator) {
+) -> (OffsetPageTable<'static>, frame::BootInfoFrameAllocator) {
     let phys_mem_offset = VirtAddr::new(physical_memory_offset);
 
     let mut mapper = unsafe {
@@ -36,7 +37,7 @@ fn _memory_init(
     };
 
     let mut frame_allocator = unsafe {
-        frame_allocator::BootInfoFrameAllocator::init(memory_regions)
+        frame::BootInfoFrameAllocator::init(memory_regions)
     };
 
     heap::init_heap(&mut mapper, &mut frame_allocator)
