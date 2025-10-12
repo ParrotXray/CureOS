@@ -213,7 +213,8 @@ pub fn init(rsdp_addr: u64, physical_memory_offset: u64) -> Option<AcpiInfo> {
             }
         }
     };
-
+    // kprintln!("  ACPI Revision: {}", tables.rsdp_revision);
+    
     let platform = match AcpiPlatform::new(tables, handler) {
         Ok(platform) => platform,
         Err(e) => {

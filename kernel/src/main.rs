@@ -41,7 +41,13 @@ fn panic(info: &PanicInfo) -> ! {
     kprintln!("================================");
     kprintln!();
     kprintln!("{}", info);
-
+    kprintln!();
+    kprintln!("Control Registers:");
+    kprintln!("  CR0: 0x{:016x}", cpu::cpu_r_cr0().bits());
+    kprintln!("  CR2: 0x{:016x}", cpu::cpu_r_cr2());
+    kprintln!("  CR3: 0x{:016x}", cpu::cpu_r_cr3());
+    kprintln!("  CR4: 0x{:016x}", cpu::cpu_r_cr4().bits());
+    
     loop {
         cpu::cpu_halt();
     }
