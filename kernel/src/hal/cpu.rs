@@ -2,20 +2,21 @@
 use x86_64::registers::control::{Cr0, Cr0Flags, Cr2, Cr3, Cr4, Cr4Flags};
 use x86_64::instructions::{interrupts, hlt};
 use core::arch::asm;
+use raw_cpuid::CpuId;
 use x86_64::{PhysAddr, structures::paging::PhysFrame};
 use x86_64::VirtAddr;
 
-/// 64 位元暫存器類型
+/// 64-bit register type
 #[allow(dead_code)]
 pub type Reg64 = u64;
-/// 32 位元暫存器類型
+/// 32-bit register type
 #[allow(dead_code)]
 pub type Reg32 = u32;
-/// 16 位元暫存器類型
+/// 16-bit register type
 #[allow(dead_code)]
 pub type Reg16 = u16;
 
-/// 通用目的暫存器結構 (64-bit)
+/// General purpose register structure (64-bit)
 #[allow(dead_code)]
 #[repr(C, packed)]
 pub struct GpRegs {
@@ -37,7 +38,7 @@ pub struct GpRegs {
     pub r15: Reg64,
 }
 
-/// 段暫存器結構
+/// Segment register structure
 #[allow(dead_code)]
 #[repr(C, packed)]
 pub struct SgReg {
@@ -49,21 +50,21 @@ pub struct SgReg {
     pub cs: Reg16,
 }
 
-/// 讀取 CR0 暫存器
+/// Read CR0 register
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_r_cr0() -> u64 {
     Cr0::read_raw()
 }
 
-/// 讀取 CR2 暫存器
+/// Read CR2 register
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_r_cr2() -> u64 {
     Cr2::read_raw()
 }
 
-/// 讀取 CR3 暫存器
+/// Read CR3 register
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_r_cr3_frame() -> PhysFrame {
@@ -89,21 +90,21 @@ pub fn cpu_r_cr3_addr() -> PhysAddr {
 }
 
 
-/// 讀取 CR4 暫存器
+/// Read CR4 register
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_r_cr4() -> u64 {
     Cr4::read_raw()
 }
 
-/// 寫入 CR0 暫存器
+/// Write to CR0 register
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_w_cr0(val: Cr0Flags) {
     unsafe { Cr0::write(val); }
 }
 
-/// 寫入 CR3 暫存器
+/// Write to CR3 register
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_w_cr3(val: u64) {
@@ -113,29 +114,25 @@ pub fn cpu_w_cr3(val: u64) {
     }
 }
 
-/// 寫入 CR4 暫存器
+/// Write to CR4 register
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_w_cr4(val: Cr4Flags) {
     unsafe { Cr4::write(val); }
 }
 
-// ============ CPU 資訊 ============
-
-/// 獲取 CPU 供應商 ID
+/// Get the CPU vendor ID
 ///
-/// # 參數
-/// * `model_out` - 輸出緩衝區，至少需要 13 bytes
-/// # 返回
-/// 字符串切片，表示 CPU 供應商資訊
+/// # Parameters
+/// * `model_out` - Output buffer, requires at least 13 bytes
+/// # Returns
+/// A string slice representing the CPU vendor information
 #[allow(dead_code)]
 pub fn cpu_get_model(model_out: &mut [u8]) -> &str {
     if model_out.len() < 13 {
         return "Buffer too small";
     }
 
-    // 使用 raw_cpuid crate
-    use raw_cpuid::CpuId;
     let cpuid = CpuId::new();
 
     if let Some(vendor) = cpuid.get_vendor_info() {
@@ -157,28 +154,25 @@ pub fn cpu_get_model(model_out: &mut [u8]) -> &str {
     }
 }
 
-/// 檢查是否支持品牌字串
+/// Check if brand string is supported
 #[allow(dead_code)]
 pub fn cpu_brand_string_supported() -> bool {
-    use raw_cpuid::CpuId;
     let cpuid = CpuId::new();
     cpuid.get_processor_brand_string().is_some()
 }
 
-/// 獲取 CPU 品牌字串
+/// Get the CPU brand string
 ///
-/// # 參數
-/// * `brand_out` - 輸出緩衝區，至少需要 49 bytes
+/// # Parameters
+/// * `brand_out` - Output buffer, requires at least 49 bytes
 ///
-/// # 返回
-/// 字符串切片，表示 CPU 品牌
+/// # Returns
+/// A string slice representing the CPU brand
 #[allow(dead_code)]
 pub fn cpu_get_brand(brand_out: &mut [u8]) -> &str {
     if brand_out.len() < 49 {
         return "Buffer too small";
     }
-
-    use raw_cpuid::CpuId;
     let cpuid = CpuId::new();
 
     if let Some(brand) = cpuid.get_processor_brand_string() {
@@ -197,10 +191,10 @@ pub fn cpu_get_brand(brand_out: &mut [u8]) -> &str {
     }
 }
 
-/// 讀取 CPU 時間戳計數器 (TSC)
+/// Read the CPU Time Stamp Counter (TSC)
 ///
-/// # 返回
-/// 時間戳計數值
+/// # Return
+/// The timestamp count value
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_rdtsc() -> u64 {
@@ -217,57 +211,57 @@ pub fn cpu_rdtsc() -> u64 {
     }
 }
 
-/// 執行 CPU 暫停指令 (減少功耗)
+/// Execute CPU pause instruction (reduce power consumption)
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_pause() {
     core::hint::spin_loop();
 }
 
-/// 停止 CPU 執行，直到下一個中斷發生
+/// Stop CPU execution until the next interrupt occurs
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_halt() {
     hlt();
 }
 
-/// 停止 CPU 並進入低功耗模式 (等同於 cpu_halt)
+/// Stop the CPU and enter low power mode (equivalent to cpu_halt)
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_idle() {
     hlt();
 }
 
-/// 啟用中斷
+/// Enable interrupts
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_enable_interrupts() {
     interrupts::enable();
 }
 
-/// 禁用中斷
+/// Disable interrupts
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_disable_interrupts() {
     interrupts::disable();
 }
 
-/// 檢查中斷是否啟用
+/// Check if interrupts are enabled
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_interrupts_enabled() -> bool {
     interrupts::are_enabled()
 }
 
-/// 在禁用中斷的情況下執行閉包
+/// Execute closure with interrupts disabled
 ///
-/// # 範例
+/// # Example
 /// ```
 /// cpu_without_interrupts(|| {
-///     // 臨界區代碼
-///     // 中斷被禁用
+/// // Critical section code
+/// // Interrupts disabled
 /// });
-/// // 中斷恢復到之前的狀態
+/// // Restore interrupts to their previous state
 /// ```
 #[allow(dead_code)]
 #[inline]
@@ -278,14 +272,14 @@ where
     interrupts::without_interrupts(f)
 }
 
-/// 無條件觸發斷點異常 (用於調試)
+/// Unconditionally trigger a breakpoint exception (for debugging)
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_breakpoint() {
     x86_64::instructions::interrupts::int3();
 }
 
-/// 讀取 RFLAGS 寄存器
+/// Read the RFLAGS register
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_read_flags() -> u64 {

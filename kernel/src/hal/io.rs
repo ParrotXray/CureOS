@@ -1,11 +1,11 @@
 // kernel/src/hal/io.rs
 use x86_64::instructions::port::{Port, PortReadOnly, PortWriteOnly};
 
-/// 向 I/O 端口寫入一個字節
+/// Write a byte to an I/O port
 ///
-/// # 參數
-/// * `port` - 端口號
-/// * `value` - 要寫入的值
+/// # Parameters
+/// * `port` - Port number
+/// * `value` - Value to write
 #[allow(dead_code)]
 #[inline]
 pub fn io_port_wb(port: u16, value: u8) {
@@ -14,12 +14,12 @@ pub fn io_port_wb(port: u16, value: u8) {
     }
 }
 
-/// 從 I/O 端口讀取一個字節
+/// Read a byte from an I/O port
 ///
-/// # 參數
-/// * `port` - 端口號
-/// # 返回
-/// 讀取到的值
+/// # Parameters
+/// * `port` - port number
+/// # Returns
+/// The value read
 #[allow(dead_code)]
 #[inline]
 pub fn io_port_rb(port: u16) -> u8 {
@@ -28,11 +28,11 @@ pub fn io_port_rb(port: u16) -> u8 {
     }
 }
 
-/// 向 I/O 端口寫入一個字 (16-bit)
+/// Write a word (16-bit) to an I/O port
 ///
-/// # 參數
-/// * `port` - 端口號
-/// * `value` - 要寫入的值
+/// # Parameters
+/// * `port` - Port number
+/// * `value` - Value to be written
 #[allow(dead_code)]
 #[inline]
 pub fn io_port_ww(port: u16, value: u16) {
@@ -41,12 +41,12 @@ pub fn io_port_ww(port: u16, value: u16) {
     }
 }
 
-/// 從 I/O 端口讀取一個字 (16-bit)
+/// Read a word (16-bit) from an I/O port
 ///
-/// # 參數
-/// * `port` - 端口號
-/// # 返回
-/// 讀取到的值
+/// # Parameters
+/// * `port` - port number
+/// # Returns
+/// The value read
 #[allow(dead_code)]
 #[inline]
 pub fn io_port_rw(port: u16) -> u16 {
@@ -55,11 +55,11 @@ pub fn io_port_rw(port: u16) -> u16 {
     }
 }
 
-/// 向 I/O 端口寫入一個雙字 (32-bit)
+/// Write a double word (32-bit) to an I/O port
 ///
-/// # 參數
-/// * `port` - 端口號
-/// * `value` - 要寫入的值
+/// # Parameters
+/// * `port` - Port number
+/// * `value` - Value to be written
 #[allow(dead_code)]
 #[inline]
 pub fn io_port_wl(port: u16, value: u32) {
@@ -68,12 +68,12 @@ pub fn io_port_wl(port: u16, value: u32) {
     }
 }
 
-/// 從 I/O 端口讀取一個雙字 (32-bit)
+/// Read a double word (32-bit) from an I/O port
 ///
-/// # 參數
-/// * `port` - 端口號
-/// # 返回
-/// 讀取到的值
+/// # Parameters
+/// * `port` - port number
+/// # Returns
+/// The value read
 #[allow(dead_code)]
 #[inline]
 pub fn io_port_rl(port: u16) -> u32 {

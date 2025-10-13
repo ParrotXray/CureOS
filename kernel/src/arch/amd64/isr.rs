@@ -1,8 +1,10 @@
 // kernel/src/kernel/asm/amd64/isr
 use x86_64::structures::idt::{InterruptStackFrame, PageFaultErrorCode};
+use x86_64::VirtAddr;
 use crate::kprintln;
 use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
 use crate::hal::cpu;
+use crate::mm::paging;
 
 /// Divide Error (#DE)
 pub extern "x86-interrupt" fn divide_error_handler(stack_frame: InterruptStackFrame) {
@@ -10,7 +12,7 @@ pub extern "x86-interrupt" fn divide_error_handler(stack_frame: InterruptStackFr
     log_error!("EXCEPTION: DIVIDE ERROR (#DE)");
     log_error!("{:#?}", stack_frame);
     loop {
-        crate::hal::cpu::cpu_halt();
+        cpu::cpu_halt();
     }
 }
 
@@ -41,7 +43,7 @@ pub extern "x86-interrupt" fn overflow_handler(stack_frame: InterruptStackFrame)
     log_error!("EXCEPTION: OVERFLOW (#OF)");
     log_error!("{:#?}", stack_frame);
     loop {
-        crate::hal::cpu::cpu_halt();
+        cpu::cpu_halt();
     }
 }
 
@@ -51,7 +53,7 @@ pub extern "x86-interrupt" fn bound_range_handler(stack_frame: InterruptStackFra
     log_error!("EXCEPTION: BOUND RANGE EXCEEDED (#BR)");
     log_error!("{:#?}", stack_frame);
     loop {
-        crate::hal::cpu::cpu_halt();
+        cpu::cpu_halt();
     }
 }
 
@@ -61,7 +63,7 @@ pub extern "x86-interrupt" fn invalid_opcode_handler(stack_frame: InterruptStack
     log_error!("EXCEPTION: INVALID OPCODE (#UD)");
     log_error!("{:#?}", stack_frame);
     loop {
-        crate::hal::cpu::cpu_halt();
+        cpu::cpu_halt();
     }
 }
 
@@ -71,7 +73,7 @@ pub extern "x86-interrupt" fn device_not_available_handler(stack_frame: Interrup
     log_error!("EXCEPTION: DEVICE NOT AVAILABLE (#NM)");
     log_error!("{:#?}", stack_frame);
     loop {
-        crate::hal::cpu::cpu_halt();
+        cpu::cpu_halt();
     }
 }
 
@@ -97,7 +99,7 @@ pub extern "x86-interrupt" fn invalid_tss_handler(
     log_fatal!("Error Code: {:#x}", error_code);
     log_fatal!("{:#?}", stack_frame);
     loop {
-        crate::hal::cpu::cpu_halt();
+        cpu::cpu_halt();
     }
 }
 
@@ -111,7 +113,7 @@ pub extern "x86-interrupt" fn segment_not_present_handler(
     log_fatal!("Error Code: {:#x}", error_code);
     log_fatal!("{:#?}", stack_frame);
     loop {
-        crate::hal::cpu::cpu_halt();
+        cpu::cpu_halt();
     }
 }
 
@@ -125,7 +127,7 @@ pub extern "x86-interrupt" fn stack_segment_fault_handler(
     log_fatal!("Error Code: {:#x}", error_code);
     log_fatal!("{:#?}", stack_frame);
     loop {
-        crate::hal::cpu::cpu_halt();
+        cpu::cpu_halt();
     }
 }
 
@@ -139,7 +141,7 @@ pub extern "x86-interrupt" fn general_protection_fault_handler(
     log_fatal!("Error Code: {:#x}", error_code);
     log_fatal!("{:#?}", stack_frame);
     loop {
-        crate::hal::cpu::cpu_halt();
+        cpu::cpu_halt();
     }
 }
 
@@ -148,7 +150,6 @@ pub extern "x86-interrupt" fn page_fault_handler(
     stack_frame: InterruptStackFrame,
     error_code: PageFaultErrorCode,
 ) {
-    use x86_64::registers::control::Cr2;
 
     kprintln!();
     log_fatal!("EXCEPTION: PAGE FAULT (#PF)");
@@ -160,8 +161,14 @@ pub extern "x86-interrupt" fn page_fault_handler(
     log_fatal!("Reserved Write: {}", error_code.contains(PageFaultErrorCode::MALFORMED_TABLE));
     log_fatal!("Instruction Fetch: {}", error_code.contains(PageFaultErrorCode::INSTRUCTION_FETCH));
     log_fatal!("{:#?}", stack_frame);
+
+    paging::handle_page_fault(
+        VirtAddr::new(cpu::cpu_r_cr2()),
+        error_code.bits()
+    );
+
     loop {
-        crate::hal::cpu::cpu_halt();
+        cpu::cpu_halt();
     }
 }
 
@@ -171,7 +178,7 @@ pub extern "x86-interrupt" fn x87_floating_point_handler(stack_frame: InterruptS
     log_error!("EXCEPTION: x87 FLOATING POINT (#MF)");
     log_error!("{:#?}", stack_frame);
     loop {
-        crate::hal::cpu::cpu_halt();
+        cpu::cpu_halt();
     }
 }
 
@@ -185,7 +192,7 @@ pub extern "x86-interrupt" fn alignment_check_handler(
     log_error!("Error Code: {:#x}", error_code);
     log_error!("{:#?}", stack_frame);
     loop {
-        crate::hal::cpu::cpu_halt();
+        cpu::cpu_halt();
     }
 }
 
@@ -203,7 +210,7 @@ pub extern "x86-interrupt" fn simd_floating_point_handler(stack_frame: Interrupt
     kprintln!("EXCEPTION: SIMD FLOATING POINT (#XM/#XF)");
     kprintln!("{:#?}", stack_frame);
     loop {
-        crate::hal::cpu::cpu_halt();
+        cpu::cpu_halt();
     }
 }
 
@@ -213,7 +220,7 @@ pub extern "x86-interrupt" fn virtualization_handler(stack_frame: InterruptStack
     log_warn!("EXCEPTION: VIRTUALIZATION (#VE)");
     log_warn!("{:#?}", stack_frame);
     loop {
-        crate::hal::cpu::cpu_halt();
+        cpu::cpu_halt();
     }
 }
 

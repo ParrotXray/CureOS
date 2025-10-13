@@ -1,4 +1,4 @@
-// src/libs/libc/print.rs
+// src/klibc/libc/print.rs
 
 use core::fmt;
 use crate::tty::tty;
@@ -19,15 +19,15 @@ pub fn _print(args: fmt::Arguments) {
 
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => ($crate::libs::print::_print(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::klibc::print::_print(format_args!($($arg)*)));
 }
 
 #[macro_export]
 macro_rules! kprintln {
     () => {
-        $crate::libs::print::_print(format_args!("\n"))
+        $crate::klibc::print::_print(format_args!("\n"))
     };
     ($($arg:tt)*) => {
-        $crate::libs::print::_print(format_args!("{}\n", format_args!($($arg)*)))
+        $crate::klibc::print::_print(format_args!("{}\n", format_args!($($arg)*)))
     };
 }

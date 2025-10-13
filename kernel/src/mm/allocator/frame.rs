@@ -1,5 +1,5 @@
+// kernel/src/mm/allocator/frame.rs
 
-// kernel/src/mm/frame
 use bootloader_api::info::{MemoryRegion, MemoryRegionKind, MemoryRegions};
 use x86_64::{
     structures::paging::{FrameAllocator, PhysFrame, Size4KiB},
@@ -35,8 +35,10 @@ impl BootInfoFrameAllocator {
         // Convert to an iterator of the frame start address
         let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
 
+        let filtered_addresses = frame_addresses.filter(|&addr| addr >= 0x100000);
+
         // Create `PhysFrame` type from the starting address
-        frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
+        filtered_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
     }
 }
 
