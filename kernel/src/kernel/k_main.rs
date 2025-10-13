@@ -17,14 +17,17 @@ pub fn _kernel_main() -> ! {
     );
 
     kprintln!();
+
+    vma::print_info();
+    vmm::get_vmm_stats().print();
+    kprintln!();
+
     log_debug!("CR0: 0x{:016x}", cpu::cpu_r_cr0());
     log_debug!("CR2: 0x{:016x}", cpu::cpu_r_cr2());
     log_debug!("CR3: 0x{:016x}", cpu::cpu_r_cr3());
     log_debug!("CR4: 0x{:016x}", cpu::cpu_r_cr4());
 
-    vma::print_info();
-    let vmm_stats = vmm::get_vmm_stats();
-    vmm_stats.print();
+
 
     // kprintln!();
     // kprintln!("=== Logger Level Demonstration ===");

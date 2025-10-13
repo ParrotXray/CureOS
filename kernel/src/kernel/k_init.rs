@@ -187,8 +187,6 @@ pub fn _kernel_init(boot_info: &'static mut BootInfo) -> ! {
 
         _post_init();
 
-        _test_memory_management(&mut mapper, &mut frame_allocator);
-
         kprintln!();
         kprintln!("========================================");
         kprintln!("  Kernel Initialization Complete!       ");
@@ -207,67 +205,4 @@ pub fn kernel_emergency_cleanup() {
     log_error!("Emergency cleanup triggered");
     // 在 panic 前調用，做最後的清理工作
     // 比如刷新緩衝區、保存日誌等
-}
-
-fn _test_memory_management(
-    mapper: &mut OffsetPageTable,
-    frame_allocator: &mut frame::BootInfoFrameAllocator
-) {
-    kprintln!();
-    log_info!("Testing Memory Management System...");
-
-    // Physical memory allocation
-    log_debug!("Test 1: Physical frame allocation");
-    if let Some(frame) = pmm::allocate_frame() {
-        log_debug!("  Allocated frame at: {:#x}", frame.start_address().as_u64());
-        pmm::deallocate_frame(frame);
-        log_debug!("  Deallocated frame");
-    }
-
-    // Virtual memory allocation
-    log_debug!("Test 2: Virtual memory allocation (kmalloc)");
-    if let Some(vaddr) = malloc::kmalloc(8192, mapper, frame_allocator) {
-        log_debug!("  Allocated 8KB at: {:#x}", vaddr.as_u64());
-
-        // Test Write
-        unsafe {
-            let ptr = vaddr.as_mut_ptr::<u64>();
-            *ptr = 0xDEADBEEF;
-            log_debug!("  Written test value: {:#x}", *ptr);
-        }
-
-        malloc::kfree(vaddr, 8192, mapper, frame_allocator);
-        log_debug!("  Freed memory");
-    }
-
-    // Page table mapping
-    log_debug!("Test 3: Page table mapping");
-    let test_vaddr = VirtAddr::new(0x5000_0000_0000);
-    let test_page = Page::containing_address(test_vaddr);
-
-    if let Some(test_frame) = pmm::allocate_frame() {
-        if paging::PageTableManager::map_page(
-            test_page,
-            test_frame,
-            paging::kernel_data(),
-            mapper,
-            frame_allocator
-        ).is_ok() {
-            log_debug!("  Mapped page {:#x} to frame {:#x}",
-                test_vaddr.as_u64(), test_frame.start_address().as_u64());
-
-            // Testing Address Translation
-            if let Some(phys) = paging::PageTableManager::translate_addr(test_vaddr, mapper) {
-                log_debug!("  Translation check: {:#x} -> {:#x}", test_vaddr.as_u64(), phys.as_u64());
-            }
-
-            // Unmap
-            if paging::PageTableManager::unmap_page(test_page, mapper).is_ok() {
-                log_debug!("  Unmapped page");
-            }
-        }
-        pmm::deallocate_frame(test_frame);
-    }
-    
-    log_info!("Memory tests completed!");
 }

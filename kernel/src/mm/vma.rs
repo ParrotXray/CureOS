@@ -141,32 +141,31 @@ pub fn get_region_name(addr: VirtAddr) -> &'static str {
 
 /// Print hhk address space layout
 pub fn print_info() {
-    log_info!("Higher Half Kernel Memory Layout:");
-    log_info!("  User Space:     {:#018x} - {:#018x}",
+    log_info!("User Space: {:#018x} - {:#018x}",
         0x0u64,
         0x0000_7FFF_FFFF_FFFFu64
     );
-    log_info!("  Physical Map:   {:#018x} - {:#018x}",
+    log_info!("Physical Map: {:#018x} - {:#018x}",
         PHYS_MEM_OFFSET,
         HIGHER_HALF_BASE - 1
     );
-    log_info!("  Kernel Base:    {:#018x}", HIGHER_HALF_BASE);
-    log_info!("  Heap:           {:#018x} - {:#018x} ({} KiB)",
+    log_info!("Kernel Base: {:#018x}", HIGHER_HALF_BASE);
+    log_info!("Heap: {:#018x} - {:#018x} ({} KiB)",
         HEAP_START.as_u64(),
         HEAP_START.as_u64() + HEAP_SIZE as u64,
         HEAP_SIZE / 1024
     );
-    log_info!("  Dynamic:        {:#018x} - {:#018x} ({} MiB)",
+    log_info!("Dynamic: {:#018x} - {:#018x} ({} MiB)",
         KERNEL_DYNAMIC_START.as_u64(),
         KERNEL_DYNAMIC_END.as_u64(),
         KERNEL_DYNAMIC_SIZE / (1024 * 1024)
     );
-    log_info!("  Kernel Stack:   {:#018x} - {:#018x} ({} MiB)",
+    log_info!("Kernel Stack: {:#018x} - {:#018x} ({} MiB)",
         KERNEL_STACK_START.as_u64(),
         KERNEL_STACK_END.as_u64(),
         KERNEL_STACK_SIZE / (1024 * 1024)
     );
-    log_info!("  Device Mapping: {:#018x} - {:#018x} ({} MiB)",
+    log_info!("Device Mapping: {:#018x} - {:#018x} ({} MiB)",
         DEVICE_MAPPING_START.as_u64(),
         DEVICE_MAPPING_END.as_u64(),
         DEVICE_MAPPING_SIZE / (1024 * 1024)

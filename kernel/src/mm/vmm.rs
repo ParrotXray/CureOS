@@ -21,7 +21,6 @@ struct MemoryBlock {
     page_count: usize,
 }
 
-
 #[derive(Debug, Clone, Copy)]
 pub struct VmmStats {
     pub next_vaddr: VirtAddr,
@@ -35,18 +34,17 @@ pub struct VmmStats {
 
 impl VmmStats {
     pub fn print(&self) {
-        log_info!("Virtual Memory Statistics:");
-        log_info!("  Allocated: {} pages ({} KiB) in {} blocks",
+        log_info!("Allocated: {} pages ({} KiB) in {} blocks",
             self.allocated_pages,
             self.allocated_pages * 4,
             self.allocated_blocks_count
         );
-        log_info!("  Free:      {} pages ({} KiB) in {} blocks",
+        log_info!("Free: {} pages ({} KiB) in {} blocks",
             self.free_pages,
             self.free_pages * 4,
             self.free_blocks_count
         );
-        log_info!("  New Usage: {} pages ({} KiB)",
+        log_info!("New Usage: {} pages ({} KiB)",
             self.used_from_new,
             self.used_from_new * 4
         );
