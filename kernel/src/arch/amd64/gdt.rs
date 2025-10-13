@@ -104,6 +104,8 @@ pub fn kernel_data_selector() -> SegmentSelector {
 // 初始化 GDT
 pub fn init() {
     GDT.0.load();
+    let gdt_addr = &GDT.0 as *const _ as u64;
+    log_debug!("GDT address: {:#018x}", gdt_addr);
 
     unsafe {
         CS::set_reg(GDT.1.kernel_code_selector);

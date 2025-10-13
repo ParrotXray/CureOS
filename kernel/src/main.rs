@@ -16,7 +16,7 @@ use x86_64::{
 };
 
 mod hal;
-mod libs;
+mod klibc;
 pub mod arch;
 pub mod mm;
 pub mod tty;

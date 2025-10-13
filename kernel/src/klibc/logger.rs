@@ -157,8 +157,8 @@ fn fmt_to_buffer<'a>(buf: &'a mut [u8], args: fmt::Arguments) -> Result<&'a str,
 #[macro_export]
 macro_rules! log_trace {
     ($($arg:tt)*) => {
-        $crate::libs::logger::_log(
-            $crate::libs::logger::LogLevel::Trace,
+        $crate::klibc::logger::_log(
+            $crate::klibc::logger::LogLevel::Trace,
             format_args!($($arg)*),
             Some(file!()),
             Some(line!())
@@ -170,8 +170,8 @@ macro_rules! log_trace {
 #[macro_export]
 macro_rules! log_debug {
     ($($arg:tt)*) => {
-        $crate::libs::logger::_log(
-            $crate::libs::logger::LogLevel::Debug,
+        $crate::klibc::logger::_log(
+            $crate::klibc::logger::LogLevel::Debug,
             format_args!($($arg)*),
             Some(file!()),
             Some(line!())
@@ -183,8 +183,8 @@ macro_rules! log_debug {
 #[macro_export]
 macro_rules! log_info {
     ($($arg:tt)*) => {
-        $crate::libs::logger::_log(
-            $crate::libs::logger::LogLevel::Info,
+        $crate::klibc::logger::_log(
+            $crate::klibc::logger::LogLevel::Info,
             format_args!($($arg)*),
             Some(file!()),
             Some(line!())
@@ -196,8 +196,8 @@ macro_rules! log_info {
 #[macro_export]
 macro_rules! log_warn {
     ($($arg:tt)*) => {
-        $crate::libs::logger::_log(
-            $crate::libs::logger::LogLevel::Warn,
+        $crate::klibc::logger::_log(
+            $crate::klibc::logger::LogLevel::Warn,
             format_args!($($arg)*),
             Some(file!()),
             Some(line!())
@@ -209,8 +209,8 @@ macro_rules! log_warn {
 #[macro_export]
 macro_rules! log_error {
     ($($arg:tt)*) => {
-        $crate::libs::logger::_log(
-            $crate::libs::logger::LogLevel::Error,
+        $crate::klibc::logger::_log(
+            $crate::klibc::logger::LogLevel::Error,
             format_args!($($arg)*),
             Some(file!()),
             Some(line!())
@@ -222,8 +222,8 @@ macro_rules! log_error {
 #[macro_export]
 macro_rules! log_fatal {
     ($($arg:tt)*) => {
-        $crate::libs::logger::_log(
-            $crate::libs::logger::LogLevel::Fatal,
+        $crate::klibc::logger::_log(
+            $crate::klibc::logger::LogLevel::Fatal,
             format_args!($($arg)*),
             Some(file!()),
             Some(line!())
