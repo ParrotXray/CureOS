@@ -1,4 +1,4 @@
 pub mod gdt;
 pub mod idt;
-pub mod interrupt;
+pub mod isr;
 // pub mod segment;

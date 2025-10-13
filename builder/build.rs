@@ -20,8 +20,8 @@ fn main() {
         .create_disk_image(&uefi_path)
         .expect("Failed to create UEFI disk image");
 
-    println!("cargo:warning=✓ BIOS image: {:?}", bios_path);
-    println!("cargo:warning=✓ UEFI image: {:?}", uefi_path);
+    println!("cargo:warning=BIOS image: {:?}", bios_path);
+    println!("cargo:warning=UEFI image: {:?}", uefi_path);
 
     println!("cargo:rustc-env=BIOS_IMAGE={}", bios_path.display());
     println!("cargo:rustc-env=UEFI_IMAGE={}", uefi_path.display());

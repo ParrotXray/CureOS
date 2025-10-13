@@ -1,4 +1,4 @@
-// kernel/src/kernel/asm/x86/gdt.rs
+// kernel/src/kernel/asm/amd64/gdt.rs
 use x86_64::structures::gdt::{GlobalDescriptorTable, Descriptor, SegmentSelector};
 use x86_64::structures::tss::TaskStateSegment;
 use x86_64::instructions::segmentation::{Segment, CS, DS, ES, SS};
@@ -6,6 +6,7 @@ use x86_64::instructions::tables::load_tss;
 use x86_64::VirtAddr;
 use lazy_static::lazy_static;
 use crate::kprintln;
+use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
 
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 
@@ -119,10 +120,9 @@ pub fn init() {
 pub fn print_info() {
     let selectors = get_selectors();
 
-    kprintln!("GDT Information:");
-    kprintln!("  Kernel Code: {:#x} (ring 0)", selectors.kernel_code_selector.0);
-    kprintln!("  Kernel Data: {:#x} (ring 0)", selectors.kernel_data_selector.0);
-    kprintln!("  User Code:   {:#x} (ring 3)", selectors.user_code_selector.0);
-    kprintln!("  User Data:   {:#x} (ring 3)", selectors.user_data_selector.0);
-    kprintln!("  TSS:         {:#x}", selectors.tss_selector.0);
+    log_info!("Kernel Code: {:#x} (ring 0)", selectors.kernel_code_selector.0);
+    log_info!("Kernel Data: {:#x} (ring 0)", selectors.kernel_data_selector.0);
+    log_info!("User Code:   {:#x} (ring 3)", selectors.user_code_selector.0);
+    log_info!("User Data:   {:#x} (ring 3)", selectors.user_data_selector.0);
+    log_info!("TSS:         {:#x}", selectors.tss_selector.0);
 }
