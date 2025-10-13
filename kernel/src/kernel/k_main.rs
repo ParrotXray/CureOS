@@ -1,5 +1,5 @@
-// kernel/src/k_main.rs (Updated with Logger Demo)
-use crate::hal::cpu;
+// kernel/src/k_main.rs
+use crate::hal::{cpu, rtc};
 use crate::kprintln;
 use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
 use crate::mm::{vma, vmm};
@@ -20,6 +20,11 @@ pub fn _kernel_main() -> ! {
 
     vma::print_info();
     vmm::get_vmm_stats().print();
+
+    kprintln!();
+
+    rtc::print_info();
+
     kprintln!();
 
     log_debug!("CR0: 0x{:016x}", cpu::cpu_r_cr0());

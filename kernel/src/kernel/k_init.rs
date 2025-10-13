@@ -11,7 +11,7 @@ use crate::kernel::k_main;
 use crate::klibc::logger::{init, LogLevel, LoggerConfig};
 use crate::klibc::malloc;
 use crate::{log_debug, log_error, log_info, log_trace, log_warn};
-use crate::hal::acpi;
+use crate::hal::{acpi, rtc};
 
 fn _logger_init() {
     init(
@@ -158,6 +158,8 @@ fn _post_init() {
     kprintln!();
     log_info!("Post Initialization");
     // TODO: 釋放 bootloader 佔用的內存
+
+    rtc::init();
     log_debug!("Cleanup completed");
 }
 
