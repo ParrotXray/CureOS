@@ -97,6 +97,15 @@ pub extern "x86-interrupt" fn invalid_tss_handler(
     kprintln!();
     log_fatal!("EXCEPTION: INVALID TSS (#TS)");
     log_fatal!("Error Code: {:#x}", error_code);
+    
+    // Decode the error code to provide more information
+    let selector_index = (error_code >> 3) & 0x1FFF;  // Bits 15-3
+    let ti = (error_code >> 2) & 0x1;                 // Bit 2: Table Indicator (0=GDT, 1=LDT)
+    let rpl = error_code & 0x3;                       // Bits 1-0: RPL
+    
+    log_fatal!("Segment Selector Index: {:#x} ({})", selector_index, selector_index);
+    log_fatal!("Table Indicator: {} ({})", ti, if ti == 0 { "GDT" } else { "LDT" });
+    log_fatal!("Requested Privilege Level: {}", rpl);
     log_fatal!("{:#?}", stack_frame);
     loop {
         cpu::cpu_halt();
@@ -111,6 +120,15 @@ pub extern "x86-interrupt" fn segment_not_present_handler(
     kprintln!();
     log_fatal!("EXCEPTION: SEGMENT NOT PRESENT (#NP)");
     log_fatal!("Error Code: {:#x}", error_code);
+    
+    // Decode the error code to provide more information
+    let selector_index = (error_code >> 3) & 0x1FFF;  // Bits 15-3
+    let ti = (error_code >> 2) & 0x1;                 // Bit 2: Table Indicator (0=GDT, 1=LDT)
+    let rpl = error_code & 0x3;                       // Bits 1-0: RPL
+    
+    log_fatal!("Segment Selector Index: {:#x} ({})", selector_index, selector_index);
+    log_fatal!("Table Indicator: {} ({})", ti, if ti == 0 { "GDT" } else { "LDT" });
+    log_fatal!("Requested Privilege Level: {}", rpl);
     log_fatal!("{:#?}", stack_frame);
     loop {
         cpu::cpu_halt();

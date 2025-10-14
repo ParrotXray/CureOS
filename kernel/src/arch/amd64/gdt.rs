@@ -131,4 +131,8 @@ pub fn print_info() {
     log_info!("User Code:   {:#x} (ring 3)", selectors.user_code_selector.0);
     log_info!("User Data:   {:#x} (ring 3)", selectors.user_data_selector.0);
     log_info!("TSS:         {:#x}", selectors.tss_selector.0);
+    
+    // Verify that user segments have correct RPL bits
+    log_debug!("User Code RPL: {:?}", selectors.user_code_selector.rpl());
+    log_debug!("User Data RPL: {:?}", selectors.user_data_selector.rpl());
 }
