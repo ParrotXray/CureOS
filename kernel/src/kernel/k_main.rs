@@ -55,7 +55,7 @@ pub fn _kernel_main() -> ! {
         crate::hal::ioapic::unmask_irq(1);
         log_info!("Keyboard interrupt unmasked");
 
-        // Enable CPU interrupts
+
         cpu::cpu_enable_interrupts();
 
         log_info!("CPU interrupts enabled");
@@ -73,7 +73,6 @@ pub fn _kernel_main() -> ! {
     kprintln!();
 
     loop {
-        // Until the next interrupt occurs
         cpu::cpu_halt();
     }
 }

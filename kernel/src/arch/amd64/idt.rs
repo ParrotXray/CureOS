@@ -47,6 +47,6 @@ pub fn init() {
 }
 
 pub fn print_info() {
-    log_info!("  IDT loaded and active");
-    log_info!("  Exception handlers registered");
+    log_info!("IDT loaded and active");
+    log_info!("Exception handlers registered");
 }
