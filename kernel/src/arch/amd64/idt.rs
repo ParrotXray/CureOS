@@ -35,6 +35,9 @@ lazy_static! {
         idt.simd_floating_point.set_handler_fn(simd_floating_point_handler);
         idt.virtualization.set_handler_fn(virtualization_handler);
 
+        // IRQ 32 start
+        idt[33].set_handler_fn(keyboard_interrupt_handler);   // IRQ 1 Keyboard
+
         idt
     };
 }

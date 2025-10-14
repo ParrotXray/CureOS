@@ -12,6 +12,16 @@ pub struct CureAcpiHandler {
     physical_memory_offset: u64,
 }
 
+pub struct AcpiInfo {
+    pub revision: u8,
+    pub boot_processor: Option<u32>,
+    pub cpu_count: usize,
+    pub has_apic: bool,
+    pub has_hpet: bool,
+    pub local_apic_address: Option<u64>,
+    pub io_apics: alloc::vec::Vec<(u64, u8, u32)>, // (address, id, gsi_base)
+}
+
 impl CureAcpiHandler {
     pub const fn new(physical_memory_offset: u64) -> Self {
         Self {
@@ -187,14 +197,6 @@ impl Handler for CureAcpiHandler {
     }
 }
 
-pub struct AcpiInfo {
-    pub revision: u8,
-    pub boot_processor: Option<u32>,
-    pub cpu_count: usize,
-    pub has_apic: bool,
-    pub has_hpet: bool,
-}
-
 pub fn init(rsdp_addr: u64, physical_memory_offset: u64) -> Option<AcpiInfo> {
 
     let handler = CureAcpiHandler::new(physical_memory_offset);
@@ -214,7 +216,6 @@ pub fn init(rsdp_addr: u64, physical_memory_offset: u64) -> Option<AcpiInfo> {
             }
         }
     };
-    // kprintln!("  ACPI Revision: {}", tables.rsdp_revision);
 
     let platform = match AcpiPlatform::new(tables, handler) {
         Ok(platform) => platform,
@@ -240,25 +241,33 @@ pub fn init(rsdp_addr: u64, physical_memory_offset: u64) -> Option<AcpiInfo> {
     };
 
     // 檢查中斷模型
-    let has_apic = match &platform.interrupt_model {
+    let (has_apic, local_apic_addr, io_apics_info) = match &platform.interrupt_model {
         InterruptModel::Apic(apic) => {
             log_info!("Local APIC Address: {:#x}", apic.local_apic_address);
             log_info!("IO APICs: {} controller(s)", apic.io_apics.len());
 
+            let mut io_apics = alloc::vec::Vec::new();
+
             for (i, io_apic) in apic.io_apics.iter().enumerate() {
                 log_info!("IO APIC {}: ID={}, Address={:#x}, GSI Base={}",
                     i, io_apic.id, io_apic.address, io_apic.global_system_interrupt_base);
+
+                io_apics.push((
+                    io_apic.address as u64,
+                    io_apic.id,
+                    io_apic.global_system_interrupt_base,
+                ));
             }
 
-            true
+            (true, Some(apic.local_apic_address as u64), io_apics)
         }
         InterruptModel::Unknown => {
             log_warn!("Interrupt Model: Unknown (not APIC)");
-            false
+            (false, None, alloc::vec::Vec::new())
         }
         _ => {
             log_warn!("Interrupt Model: Other");
-            false
+            (false, None, alloc::vec::Vec::new())
         }
     };
 
@@ -299,6 +308,8 @@ pub fn init(rsdp_addr: u64, physical_memory_offset: u64) -> Option<AcpiInfo> {
         cpu_count,
         has_apic,
         has_hpet,
+        local_apic_address: local_apic_addr,
+        io_apics: io_apics_info,
     })
 }
 

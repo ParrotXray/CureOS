@@ -3,7 +3,7 @@ use x86_64::structures::idt::{InterruptStackFrame, PageFaultErrorCode};
 use x86_64::VirtAddr;
 use crate::kprintln;
 use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
-use crate::hal::cpu;
+use crate::hal::{cpu, lapic};
 use crate::mm::paging;
 
 /// Divide Error (#DE)
@@ -225,3 +225,19 @@ pub extern "x86-interrupt" fn virtualization_handler(stack_frame: InterruptStack
 }
 
 // TODO Timer interrupt, Keyboard interrupt
+
+pub extern "x86-interrupt" fn keyboard_interrupt_handler(stack_frame: InterruptStackFrame) {
+    use x86_64::instructions::port::Port;
+
+    unsafe {
+        // 读取键盘扫描码
+        let mut port = Port::new(0x60);
+        let scancode: u8 = port.read();
+
+        // 传递给键盘驱动处理
+        crate::drivers::keyboard::handle_scancode(scancode);
+    }
+
+    // 发送 EOI
+    lapic::send_eoi();
+}

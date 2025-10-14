@@ -1,7 +1,7 @@
-// kernel/src/k_init.rs (Updated with Logger)
+// kernel/src/kernel/k_init.rs
 use bootloader_api::BootInfo;
 use bootloader_api::info::MemoryRegionKind;
-use x86_64::structures::paging::{OffsetPageTable, Page };
+use x86_64::structures::paging::OffsetPageTable;
 use x86_64::{PhysAddr, VirtAddr};
 use crate::mm::{allocator::{heap, frame, pmm}, vmm, paging, vma};
 use crate::arch::amd64::{gdt, idt};
@@ -11,7 +11,8 @@ use crate::kernel::k_main;
 use crate::klibc::logger::{init, LogLevel, LoggerConfig};
 use crate::klibc::malloc;
 use crate::{log_debug, log_error, log_info, log_trace, log_warn};
-use crate::hal::{acpi, rtc};
+use crate::drivers::keyboard;
+use crate::hal::{acpi, lapic, rtc};
 
 fn _logger_init() {
     init(
@@ -132,13 +133,11 @@ fn _boot_report(memory_regions: &bootloader_api::info::MemoryRegions, physical_m
     log_info!("Heap Start: {:#x}", vma::HEAP_START);
     log_info!("Heap Size:  {} KiB", vma::HEAP_SIZE / 1024);
 
-    if let Some(stats) = pmm::get_memory_stats() {
-        log_info!("Total Memory: {} MiB", stats.total_memory / (1024 * 1024));
-        log_info!("Free Memory:  {} MiB", stats.free_memory / (1024 * 1024));
-    }
+    vma::print_info();
+    vmm::get_vmm_stats().print();
 }
 
-fn _acpi_init(rsdp_addr: Option<u64>, physical_memory_offset: u64) {
+fn _acpi_init(rsdp_addr: Option<u64>, physical_memory_offset: u64) -> Option<acpi::AcpiInfo> {
     kprintln!();
 
     if let Some(rsdp) = rsdp_addr {
@@ -146,20 +145,82 @@ fn _acpi_init(rsdp_addr: Option<u64>, physical_memory_offset: u64) {
 
         if let Some(acpi_info) = acpi::init(rsdp, physical_memory_offset) {
             acpi::print_info(&acpi_info);
+            return Some(acpi_info);
         } else {
             log_warn!("ACPI initialization failed");
         }
     } else {
         log_warn!("RSDP not provided by bootloader");
     }
+
+    None
 }
 
-fn _post_init() {
+fn _post_init(
+    acpi_info: Option<&acpi::AcpiInfo>,
+    mapper: &mut OffsetPageTable,
+    frame_allocator: &mut frame::BootInfoFrameAllocator,
+) {
     kprintln!();
     log_info!("Post Initialization");
-    // TODO: 釋放 bootloader 佔用的內存
+
+    // 初始化 APIC/IOAPIC (如果有的話)
+    if let Some(info) = acpi_info {
+        if info.has_apic {
+            lapic::disable_legacy_pic();
+
+            unsafe {
+                if let Some(local_apic_addr) = info.local_apic_address {
+                    log_info!("Initializing Local APIC...");
+                    log_debug!("Mapping Local APIC physical address: {:#x}", local_apic_addr);
+
+                    if let Some(vaddr) = vmm::map_device_memory(
+                        PhysAddr::new(local_apic_addr),
+                        4096,
+                        mapper,
+                        frame_allocator,
+                    ) {
+                        log_debug!("Local APIC mapped to virtual address: {:#x}", vaddr.as_u64());
+
+                        lapic::init_local_apic_with_vaddr(vaddr);
+
+                        if let Some(apic_id) = lapic::get_apic_id() {
+                            log_info!("Current Local APIC ID: {}", apic_id);
+                        }
+                    } else {
+                        log_error!("Failed to map Local APIC memory");
+                    }
+                }
+
+                if !info.io_apics.is_empty() {
+                    log_info!("Initializing IO APICs...");
+
+                    for (paddr, id, gsi_base) in &info.io_apics {
+                        log_debug!("Mapping IO APIC {} at physical address: {:#x}", id, paddr);
+
+                        if let Some(vaddr) = vmm::map_device_memory(
+                            PhysAddr::new(*paddr),
+                            4096,
+                            mapper,
+                            frame_allocator,
+                        ) {
+                            log_debug!("IO APIC {} mapped to virtual address: {:#x}", id, vaddr.as_u64());
+                            crate::hal::ioapic::init_single_ioapic(vaddr, *id, *gsi_base);
+                        } else {
+                            log_error!("Failed to map IO APIC {} memory", id);
+                        }
+                    }
+
+                    log_info!("All IO APICs initialized");
+                }
+            }
+        } else {
+            log_warn!("APIC not available, using legacy PIC (not implemented yet)");
+        }
+    }
 
     rtc::init();
+    keyboard::init();
     log_debug!("Cleanup completed");
 }
 
@@ -182,12 +243,11 @@ pub fn _kernel_init(boot_info: &'static mut BootInfo) -> ! {
             &boot_info.memory_regions,
             physical_memory_offset
         );
+        let acpi_info = _acpi_init(rsdp_addr, physical_memory_offset);
+
+        _post_init(acpi_info.as_ref(), &mut mapper, &mut frame_allocator);
 
         _boot_report(&boot_info.memory_regions, physical_memory_offset);
-
-        _acpi_init(rsdp_addr, physical_memory_offset);
-
-        _post_init();
 
         kprintln!();
         kprintln!("========================================");

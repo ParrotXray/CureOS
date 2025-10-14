@@ -21,6 +21,7 @@ pub mod arch;
 pub mod mm;
 pub mod tty;
 pub mod kernel;
+pub mod drivers;
 
 use hal::cpu;
 const CONFIG: BootloaderConfig = {
