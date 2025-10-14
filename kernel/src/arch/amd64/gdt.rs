@@ -3,7 +3,7 @@ use x86_64::structures::gdt::{GlobalDescriptorTable, Descriptor, SegmentSelector
 use x86_64::structures::tss::TaskStateSegment;
 use x86_64::instructions::segmentation::{Segment, CS, DS, ES, SS};
 use x86_64::instructions::tables::load_tss;
-use x86_64::VirtAddr;
+use x86_64::{VirtAddr, PrivilegeLevel};
 use lazy_static::lazy_static;
 use crate::kprintln;
 use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
@@ -51,10 +51,14 @@ lazy_static! {
         let kernel_data_selector = gdt.append(Descriptor::kernel_data_segment());
 
         // 0x18 ring 3
-        let user_code_selector = gdt.append(Descriptor::user_code_segment());
+        let user_code_selector_index = gdt.append(Descriptor::user_code_segment());
+        // User code selector needs RPL=3, so we create a new selector with the correct privilege level
+        let user_code_selector = SegmentSelector::new(user_code_selector_index.index(), PrivilegeLevel::Ring3);
 
         // 0x20 ring 3
-        let user_data_selector = gdt.append(Descriptor::user_data_segment());
+        let user_data_selector_index = gdt.append(Descriptor::user_data_segment());
+        // User data selector needs RPL=3, so we create a new selector with the correct privilege level
+        let user_data_selector = SegmentSelector::new(user_data_selector_index.index(), PrivilegeLevel::Ring3);
 
         // 0x28 Task seg
         let tss_selector = gdt.append(Descriptor::tss_segment(&TSS));
