@@ -120,7 +120,7 @@ impl Rtc {
         }
     }
 
-    /// 將 BCD 轉換為二進制
+    /// Convert BCD to binary
     fn bcd_to_binary(bcd: u8) -> u8 {
         (bcd & 0x0F) + ((bcd >> 4) * 10)
     }
@@ -133,17 +133,18 @@ impl Rtc {
 
     pub fn init(&mut self) {
         unsafe {
-            // Read status register B
-            let status_b = Self::read_register(RTC_REG_B);
-
+            let status_b = Self::read_register(RTC_REG_B | WITH_NMI_DISABLED);
             self.binary_mode = (status_b & RTC_BIN_ENCODED_BIT) != 0;
             self.hour_24_mode = (status_b & RTC_24HRS_ENCODED_BIT) != 0;
 
-            crate::log_debug!(
-                "RTC Mode: {} encoding, {} hour format",
-                if self.binary_mode { "Binary" } else { "BCD" },
-                if self.hour_24_mode { "24" } else { "12" }
-            );
+            let mut reg_a = Self::read_register(RTC_REG_A | WITH_NMI_DISABLED);
+            reg_a = (reg_a & 0xF0) | RTC_DIVIDER_33KHZ | RTC_FREQUENCY_1024HZ;
+            Self::write_register(RTC_REG_A | WITH_NMI_DISABLED, reg_a);
+
+            // ⭐ CRITICAL: Read Register C to clear any pending interrupts!
+            Self::read_register(RTC_REG_C);
+
+            self.disable_timer();
         }
     }
 
@@ -162,7 +163,7 @@ impl Rtc {
         (second, minute, hour, day, month, year, weekday)
     }
 
-    /// Convert the value
+    /// Convert the value based on encoding mode
     fn convert_value(&self, value: u8) -> u8 {
         if self.binary_mode {
             value
@@ -177,12 +178,14 @@ impl Rtc {
             let (mut second, mut minute, mut hour, mut day, mut month, mut year, weekday) =
                 self.read_raw();
 
+            // Convert from BCD to binary when needed
             second = self.convert_value(second);
             minute = self.convert_value(minute);
             day = self.convert_value(day);
             month = self.convert_value(month);
             year = self.convert_value(year);
 
+            // Handle 12-hour format
             let pm_bit = hour & 0x80;
             hour = self.convert_value(hour & 0x7F);
 
@@ -222,15 +225,9 @@ impl Rtc {
     /// Enable RTC timer interrupt (1024Hz)
     pub fn enable_timer(&self) {
         unsafe {
-            // Disable NMI and set frequency
-            let mut reg_a = Self::read_register(RTC_REG_A);
-            reg_a = (reg_a & 0xF0) | RTC_DIVIDER_33KHZ | RTC_FREQUENCY_1024HZ;
-            Self::write_register(RTC_REG_A, reg_a);
-
-            // Enable periodic interrupts
-            let mut reg_b = Self::read_register(RTC_REG_B);
+            let mut reg_b = Self::read_register(RTC_REG_B | WITH_NMI_DISABLED);
             reg_b |= RTC_TIMER_ON;
-            Self::write_register(RTC_REG_B, reg_b);
+            Self::write_register(RTC_REG_B | WITH_NMI_DISABLED, reg_b);
 
             log_info!("RTC timer enabled at {}Hz", RTC_TIMER_BASE_FREQUENCY);
         }
@@ -239,9 +236,9 @@ impl Rtc {
     /// Disable RTC timer interrupt
     pub fn disable_timer(&self) {
         unsafe {
-            let mut reg_b = Self::read_register(RTC_REG_B);
+            let mut reg_b = Self::read_register(RTC_REG_B | WITH_NMI_DISABLED);
             reg_b &= !RTC_TIMER_ON;
-            Self::write_register(RTC_REG_B, reg_b);
+            Self::write_register(RTC_REG_B | WITH_NMI_DISABLED, reg_b);
 
             log_info!("RTC timer disabled");
         }
@@ -322,12 +319,30 @@ pub fn handle_interrupt() {
 /// RTC periodic interrupt callback (can be overwritten by other modules)
 #[allow(dead_code)]
 fn on_periodic_interrupt() {
-    // 在這裡處理定時器事件
-    // 例如: 更新系統時間、調度任務等
+    // Handle timer events here
+    // e.g., update system time, schedule tasks, etc.
+
+    // For testing: increment counter
+    unsafe {
+        RTC_TICK_COUNT += 1;
+    }
 }
 
 /// RTC alarm interrupt callback
 #[allow(dead_code)]
 fn on_alarm_interrupt() {
-    // 在這裡處理鬧鐘事件
+    // Handle alarm events here
+}
+
+// Test counter
+static mut RTC_TICK_COUNT: u64 = 0;
+
+/// Get RTC tick count (for testing)
+pub fn get_tick_count() -> u64 {
+    unsafe { RTC_TICK_COUNT }
+}
+
+/// Reset tick count (for testing)
+pub fn reset_tick_count() {
+    unsafe { RTC_TICK_COUNT = 0; }
 }

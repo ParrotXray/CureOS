@@ -263,3 +263,13 @@ pub extern "x86-interrupt" fn default_irq_handler(stack_frame: InterruptStackFra
     lapic::send_eoi();
     log_trace!("Unhandled IRQ: {:#?}", stack_frame);
 }
+
+// kernel/src/arch/amd64/isr.rs
+
+/// RTC 中斷處理 (IRQ 8, Vector 40)
+pub extern "x86-interrupt" fn rtc_interrupt_handler(_stack_frame: InterruptStackFrame) {
+    // 必須讀取 Register C 來清除 RTC 中斷標誌
+    crate::hal::rtc::handle_interrupt();
+    // 發送 EOI
+    crate::hal::lapic::send_eoi();
+}

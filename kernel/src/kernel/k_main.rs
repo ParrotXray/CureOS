@@ -54,11 +54,28 @@ pub fn _kernel_main() -> ! {
         // Unmask IRQ 1 (enable keyboard interrupt)
         crate::hal::ioapic::unmask_irq(1);
         log_info!("Keyboard interrupt unmasked");
+        log_info!("Setting up RTC interrupt (IRQ 8 -> Vector 40)");
+        crate::hal::ioapic::set_irq_redirect(
+            8,              // RTC is IRQ 8
+            40,             // Vector 40
+            apic_id as u8,
+            false,          // Edge triggered
+            false           // Active high
+        );
 
+        crate::hal::ioapic::unmask_irq(8);
+        log_info!("RTC interrupt unmasked");
+
+        log_info!("Enabling RTC timer interrupt (1024Hz)...");
+        // Reset counter
+        rtc::reset_tick_count();
+        rtc::enable_timer();
 
         cpu::cpu_enable_interrupts();
 
         log_info!("CPU interrupts enabled");
+
+        test_rtc_interrupt();
 
         kprintln!();
         log_info!("Interrupt system ready!");
@@ -75,4 +92,58 @@ pub fn _kernel_main() -> ! {
     loop {
         cpu::cpu_halt();
     }
+}
+
+fn test_rtc_interrupt() {
+    log_info!("=== RTC Interrupt Test ===");
+
+
+    // Wait and check tick count
+    log_info!("Waiting for RTC interrupts...");
+
+    let start_count = rtc::get_tick_count();
+
+    // Busy wait for ~1 second (approximately)
+    for _ in 0..1000000 {
+        cpu::cpu_pause();
+    }
+
+    let end_count = rtc::get_tick_count();
+    let ticks = end_count - start_count;
+
+    if ticks > 0 {
+        log_info!("RTC interrupt working! Received {} ticks", ticks);
+        log_info!("Expected: ~1024 ticks/second");
+        log_info!("Actual rate: {} Hz", ticks);
+    } else {
+        log_error!("RTC interrupt NOT working! No ticks received");
+    }
+
+    // Live counter display
+    log_info!("Live tick counter (press any key to continue):");
+
+    let mut last_count = rtc::get_tick_count();
+    let mut seconds = 0;
+
+    for _ in 0..5 {  // Display for 5 seconds
+        // Wait approximately 1 second
+        for _ in 0..1000000 {
+            cpu::cpu_pause();
+        }
+
+        let current_count = rtc::get_tick_count();
+        let delta = current_count - last_count;
+        last_count = current_count;
+        seconds += 1;
+
+        kprintln!("  [{}s] Total ticks: {}, Delta: {}, Rate: {} Hz",
+                  seconds, current_count, delta, delta);
+        // Also show current time
+        // if let Some(time) = rtc::get_time() {
+        //     kprintln!("       Time: {}", time.format());
+        // }
+    }
+
+    log_info!("RTC test complete!");
+    kprintln!();
 }

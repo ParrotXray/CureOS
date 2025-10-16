@@ -43,9 +43,12 @@ lazy_static! {
         // IRQ 1 (33) - Keyboard
         idt[33].set_handler_fn(keyboard_interrupt_handler);   // IRQ 1 Keyboard
 
-        // IRQ 2-15 (34-47) - default
+        idt[40].set_handler_fn(rtc_interrupt_handler);  // IRQ 8
+
         for i in 34..=47 {
-            idt[i].set_handler_fn(default_irq_handler);
+            if i != 40 {  // 跳過 RTC
+                idt[i].set_handler_fn(default_irq_handler);
+            }
         }
         idt
     };
