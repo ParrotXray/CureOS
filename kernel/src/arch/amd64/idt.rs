@@ -35,9 +35,18 @@ lazy_static! {
         idt.simd_floating_point.set_handler_fn(simd_floating_point_handler);
         idt.virtualization.set_handler_fn(virtualization_handler);
 
-        // IRQ 32 start
+
+        // 硬件中斷 (32-255)
+        // IRQ 0 (32)
+        idt[32].set_handler_fn(default_irq_handler);
+
+        // IRQ 1 (33) - Keyboard
         idt[33].set_handler_fn(keyboard_interrupt_handler);   // IRQ 1 Keyboard
 
+        // IRQ 2-15 (34-47) - default
+        for i in 34..=47 {
+            idt[i].set_handler_fn(default_irq_handler);
+        }
         idt
     };
 }

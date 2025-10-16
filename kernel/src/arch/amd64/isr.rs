@@ -1,7 +1,7 @@
 // kernel/src/kernel/asm/amd64/isr
 use x86_64::structures::idt::{InterruptStackFrame, PageFaultErrorCode};
 use x86_64::VirtAddr;
-use crate::kprintln;
+use crate::{drivers, kprintln};
 use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
 use crate::hal::{cpu, lapic};
 use crate::mm::paging;
@@ -20,7 +20,11 @@ pub extern "x86-interrupt" fn divide_error_handler(stack_frame: InterruptStackFr
 pub extern "x86-interrupt" fn debug_handler(stack_frame: InterruptStackFrame) {
     kprintln!();
     log_debug!("EXCEPTION: DEBUG (#DB)");
-    log_debug!("{:#?}", stack_frame);
+    log_debug!("instruction pointer: {:#x}", stack_frame.instruction_pointer.as_u64());
+    log_debug!("code segment: index: {:#?}, rpl: {:#?}", stack_frame.code_segment.index(), stack_frame.code_segment.rpl());
+    log_debug!("cpu flags: {:#x}", stack_frame.cpu_flags.bits());
+    log_debug!("stack pointer: {:#x}", stack_frame.stack_pointer.as_u64());
+    log_debug!("stack segment: index: {:#?}, rpl: {:#?}", stack_frame.stack_segment.index(), stack_frame.stack_segment.rpl());
 }
 
 /// Non-Maskable Interrupt (NMI)
@@ -111,7 +115,23 @@ pub extern "x86-interrupt" fn segment_not_present_handler(
     kprintln!();
     log_fatal!("EXCEPTION: SEGMENT NOT PRESENT (#NP)");
     log_fatal!("Error Code: {:#x}", error_code);
+    log_fatal!("instruction pointer: {:#x}", stack_frame.instruction_pointer.as_u64());
+    log_fatal!("code segment: index: {:#?}, rpl: {:#?}", stack_frame.code_segment.index(), stack_frame.code_segment.rpl());
+    log_fatal!("cpu flags: {:#x}", stack_frame.cpu_flags.bits());
+    log_fatal!("stack pointer: {:#x}", stack_frame.stack_pointer.as_u64());
+    log_fatal!("stack segment: index: {:#?}, rpl: {:#?}", stack_frame.stack_segment.index(), stack_frame.stack_segment.rpl());
+
+    let is_external = (error_code & 0x01) != 0;
+    let table = if (error_code & 0x02) != 0 { "IDT" } else { "GDT" };
+    let index = (error_code >> 3) & 0x1FFF;
+
+    log_fatal!("Segment: {} index {:#x} (external: {})", table, index, is_external);
     log_fatal!("{:#?}", stack_frame);
+
+    log_fatal!("Current segments:");
+    log_fatal!("  CS: {:#x}", crate::arch::amd64::gdt::kernel_code_selector().0);
+    log_fatal!("  SS: {:#x}", crate::arch::amd64::gdt::kernel_data_selector().0);
+
     loop {
         cpu::cpu_halt();
     }
@@ -230,14 +250,16 @@ pub extern "x86-interrupt" fn keyboard_interrupt_handler(stack_frame: InterruptS
     use x86_64::instructions::port::Port;
 
     unsafe {
-        // 读取键盘扫描码
         let mut port = Port::new(0x60);
         let scancode: u8 = port.read();
 
-        // 传递给键盘驱动处理
-        crate::drivers::keyboard::handle_scancode(scancode);
+        drivers::keyboard::handle_scancode(scancode);
     }
 
-    // 发送 EOI
     lapic::send_eoi();
+}
+
+pub extern "x86-interrupt" fn default_irq_handler(stack_frame: InterruptStackFrame) {
+    lapic::send_eoi();
+    log_trace!("Unhandled IRQ: {:#?}", stack_frame);
 }
