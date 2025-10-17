@@ -1,5 +1,6 @@
 // kernel/src/hal/rtc.rs
 use crate::hal::io::{io_port_rb, io_port_wb};
+use core::sync::atomic::{AtomicU64, Ordering};
 use spin::Mutex;
 use crate::log_info;
 
@@ -96,14 +97,14 @@ impl Rtc {
         }
     }
 
-    /// Read CMOS registers (with NMI disabled)
-    unsafe fn read_register(reg: u8) -> u8 {
+    /// Read CMOS registers (with NMI disabled) - 公開的靜態方法
+    pub unsafe fn read_register(reg: u8) -> u8 {
         io_port_wb(RTC_INDEX_PORT, reg | WITH_NMI_DISABLED);
         io_port_rb(RTC_TARGET_PORT)
     }
 
-    /// Write to CMOS register (with NMI disabled)
-    unsafe fn write_register(reg: u8, value: u8) {
+    /// Write to CMOS register (with NMI disabled) - 公開的靜態方法
+    pub unsafe fn write_register(reg: u8, value: u8) {
         io_port_wb(RTC_INDEX_PORT, reg | WITH_NMI_DISABLED);
         io_port_wb(RTC_TARGET_PORT, value);
     }
@@ -113,22 +114,28 @@ impl Rtc {
         (Self::read_register(RTC_REG_A) & RTC_UPDATE_IN_PROGRESS) != 0
     }
 
-    /// Wait for RTC update to complete
-    unsafe fn wait_for_update() {
-        while Self::is_updating() {
+    /// Wait for RTC update to complete (with timeout)
+    unsafe fn wait_for_update() -> bool {
+        const MAX_ATTEMPTS: u32 = 100000;
+        let mut attempts = 0;
+
+        while Self::is_updating() && attempts < MAX_ATTEMPTS {
             core::hint::spin_loop();
+            attempts += 1;
         }
+
+        if attempts >= MAX_ATTEMPTS {
+            crate::log_warn!("RTC wait_for_update timeout");
+            Self::read_register(RTC_REG_C); // Force clear
+            return false;
+        }
+
+        true
     }
 
     /// Convert BCD to binary
     fn bcd_to_binary(bcd: u8) -> u8 {
         (bcd & 0x0F) + ((bcd >> 4) * 10)
-    }
-
-    /// Convert binary to BCD
-    #[allow(dead_code)]
-    fn binary_to_bcd(bin: u8) -> u8 {
-        ((bin / 10) << 4) | (bin % 10)
     }
 
     pub fn init(&mut self) {
@@ -141,17 +148,16 @@ impl Rtc {
             reg_a = (reg_a & 0xF0) | RTC_DIVIDER_33KHZ | RTC_FREQUENCY_1024HZ;
             Self::write_register(RTC_REG_A | WITH_NMI_DISABLED, reg_a);
 
-            // ⭐ CRITICAL: Read Register C to clear any pending interrupts!
             Self::read_register(RTC_REG_C);
 
             self.disable_timer();
+
+            Self::read_register(RTC_REG_C);
         }
     }
 
-    /// Read raw RTC time data
-    unsafe fn read_raw(&self) -> (u8, u8, u8, u8, u8, u8, u8) {
-        Self::wait_for_update();
-
+    /// Read raw data directly (without waiting for update)
+    unsafe fn read_raw_no_wait(&self) -> (u8, u8, u8, u8, u8, u8, u8) {
         let second = Self::read_register(RTC_REG_SEC);
         let minute = Self::read_register(RTC_REG_MIN);
         let hour = Self::read_register(RTC_REG_HRS);
@@ -163,6 +169,12 @@ impl Rtc {
         (second, minute, hour, day, month, year, weekday)
     }
 
+    /// Wait for update and then read (for initialization)
+    unsafe fn read_raw(&self) -> (u8, u8, u8, u8, u8, u8, u8) {
+        Self::wait_for_update();
+        self.read_raw_no_wait()
+    }
+
     /// Convert the value based on encoding mode
     fn convert_value(&self, value: u8) -> u8 {
         if self.binary_mode {
@@ -172,11 +184,11 @@ impl Rtc {
         }
     }
 
-    /// Read the RTC time
+    /// Read the RTC time (safe version - no wait during interrupts)
     pub fn read_time(&self) -> DateTime {
         unsafe {
             let (mut second, mut minute, mut hour, mut day, mut month, mut year, weekday) =
-                self.read_raw();
+                self.read_raw_no_wait();
 
             // Convert from BCD to binary when needed
             second = self.convert_value(second);
@@ -207,17 +219,20 @@ impl Rtc {
         }
     }
 
-    /// Read multiple times and ensure consistency
+    /// Read time with retry (for initialization)
     pub fn read_time_stable(&self) -> DateTime {
-        loop {
-            let time1 = self.read_time();
-            let time2 = self.read_time();
+        unsafe {
+            loop {
+                Self::wait_for_update();
+                let time1 = self.read_time();
+                let time2 = self.read_time();
 
-            if time1.second == time2.second
-                && time1.minute == time2.minute
-                && time1.hour == time2.hour
-            {
-                return time1;
+                if time1.second == time2.second
+                    && time1.minute == time2.minute
+                    && time1.hour == time2.hour
+                {
+                    return time1;
+                }
             }
         }
     }
@@ -225,9 +240,22 @@ impl Rtc {
     /// Enable RTC timer interrupt (1024Hz)
     pub fn enable_timer(&self) {
         unsafe {
+            // 步驟 1: 先確保關閉
+            self.disable_timer();
+            Self::read_register(RTC_REG_C);
+
+            // 步驟 2: 設置頻率
+            let mut reg_a = Self::read_register(RTC_REG_A | WITH_NMI_DISABLED);
+            reg_a = (reg_a & 0xF0) | RTC_DIVIDER_33KHZ | RTC_FREQUENCY_1024HZ;
+            Self::write_register(RTC_REG_A | WITH_NMI_DISABLED, reg_a);
+
+            // 步驟 3: 啟用週期性中斷
             let mut reg_b = Self::read_register(RTC_REG_B | WITH_NMI_DISABLED);
             reg_b |= RTC_TIMER_ON;
             Self::write_register(RTC_REG_B | WITH_NMI_DISABLED, reg_b);
+
+            // 步驟 4: 清除中斷標誌
+            Self::read_register(RTC_REG_C);
 
             log_info!("RTC timer enabled at {}Hz", RTC_TIMER_BASE_FREQUENCY);
         }
@@ -240,32 +268,54 @@ impl Rtc {
             reg_b &= !RTC_TIMER_ON;
             Self::write_register(RTC_REG_B | WITH_NMI_DISABLED, reg_b);
 
-            log_info!("RTC timer disabled");
+            Self::read_register(RTC_REG_C);
         }
-    }
-
-    /// Read and clear RTC interrupt status (must be called in the interrupt handler)
-    pub fn read_interrupt_status(&self) -> u8 {
-        unsafe { Self::read_register(RTC_REG_C) }
     }
 }
 
-static RTC: Mutex<Option<Rtc>> = Mutex::new(None);
+static RTC_DEVICE: Mutex<Option<Rtc>> = Mutex::new(None);
 
+static RTC_TIME_CACHE: Mutex<Option<DateTime>> = Mutex::new(None);
+
+static RTC_TICK_COUNT: AtomicU64 = AtomicU64::new(0);
+
+/// Initialize RTC
 pub fn init() {
     let mut rtc = Rtc::new();
     rtc.init();
-    *RTC.lock() = Some(rtc);
+
+    let initial_time = rtc.read_time_stable();
+
+    *RTC_DEVICE.lock() = Some(rtc);
+    *RTC_TIME_CACHE.lock() = Some(initial_time);
 
     log_info!("RTC initialized");
 }
 
+/// Get cached time (safe, no deadlock)
 pub fn get_time() -> Option<DateTime> {
-    let rtc = RTC.lock();
-    let rtc = rtc.as_ref()?;
-    Some(rtc.read_time_stable())
+    RTC_TIME_CACHE.lock().clone()
 }
 
+/// Update time cache (call periodically in main loop, NOT in interrupt)
+pub fn update_time_cache() {
+    if let Some(rtc) = RTC_DEVICE.lock().as_ref() {
+        let time = rtc.read_time();
+        *RTC_TIME_CACHE.lock() = Some(time);
+    }
+}
+
+/// Force read time from RTC (slow, use sparingly)
+pub fn force_read_time() -> Option<DateTime> {
+    let rtc = RTC_DEVICE.lock();
+    let rtc = rtc.as_ref()?;
+    let time = rtc.read_time();
+    // Update cache
+    *RTC_TIME_CACHE.lock() = Some(time);
+    Some(time)
+}
+
+/// Print current time info
 pub fn print_info() {
     if let Some(time) = get_time() {
         log_info!(
@@ -285,64 +335,33 @@ pub fn print_info() {
 
 /// Enable RTC timer
 pub fn enable_timer() {
-    if let Some(rtc) = RTC.lock().as_ref() {
+    if let Some(rtc) = RTC_DEVICE.lock().as_ref() {
         rtc.enable_timer();
     }
 }
 
 /// Disable the RTC timer
 pub fn disable_timer() {
-    if let Some(rtc) = RTC.lock().as_ref() {
+    if let Some(rtc) = RTC_DEVICE.lock().as_ref() {
         rtc.disable_timer();
     }
 }
 
-/// Handle RTC interrupt (needs to be called in IRQ 8 handler)
-pub fn handle_interrupt() {
-    if let Some(rtc) = RTC.lock().as_ref() {
-        // CRITICAL: Must read Register C to clear the interrupt flag
-        // Otherwise the RTC will not send the next interrupt!
-        let status = rtc.read_interrupt_status();
-
-        // bit 6 = periodic interrupt
-        if (status & 0x40) != 0 {
-            on_periodic_interrupt();
-        }
-
-        // bit 5 = alarm interrupt
-        if (status & 0x20) != 0 {
-            on_alarm_interrupt();
-        }
-    }
-}
-
-/// RTC periodic interrupt callback (can be overwritten by other modules)
-#[allow(dead_code)]
-fn on_periodic_interrupt() {
-    // Handle timer events here
-    // e.g., update system time, schedule tasks, etc.
-
-    // For testing: increment counter
-    unsafe {
-        RTC_TICK_COUNT += 1;
-    }
-}
-
-/// RTC alarm interrupt callback
-#[allow(dead_code)]
-fn on_alarm_interrupt() {
-    // Handle alarm events here
-}
-
-// Test counter
-static mut RTC_TICK_COUNT: u64 = 0;
-
-/// Get RTC tick count (for testing)
+/// Get RTC tick count (lock-free, safe in interrupts)
 pub fn get_tick_count() -> u64 {
-    unsafe { RTC_TICK_COUNT }
+    RTC_TICK_COUNT.load(Ordering::Relaxed)
 }
 
 /// Reset tick count (for testing)
 pub fn reset_tick_count() {
-    unsafe { RTC_TICK_COUNT = 0; }
+    RTC_TICK_COUNT.store(0, Ordering::Relaxed);
+}
+
+/// Handle RTC interrupt (called in IRQ 8 handler)
+pub fn handle_interrupt() {
+    unsafe {
+        Rtc::read_register(RTC_REG_C);
+    }
+
+    RTC_TICK_COUNT.fetch_add(1, Ordering::Relaxed);
 }

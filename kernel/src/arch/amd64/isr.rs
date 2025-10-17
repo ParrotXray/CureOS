@@ -3,7 +3,7 @@ use x86_64::structures::idt::{InterruptStackFrame, PageFaultErrorCode};
 use x86_64::VirtAddr;
 use crate::{drivers, kprintln};
 use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
-use crate::hal::{cpu, lapic};
+use crate::hal::{cpu, lapic, rtc};
 use crate::mm::paging;
 
 /// Divide Error (#DE)
@@ -261,15 +261,13 @@ pub extern "x86-interrupt" fn keyboard_interrupt_handler(stack_frame: InterruptS
 
 pub extern "x86-interrupt" fn default_irq_handler(stack_frame: InterruptStackFrame) {
     lapic::send_eoi();
-    log_trace!("Unhandled IRQ: {:#?}", stack_frame);
+    log_trace!("Unhandled IRQ");
 }
 
-// kernel/src/arch/amd64/isr.rs
 
-/// RTC 中斷處理 (IRQ 8, Vector 40)
 pub extern "x86-interrupt" fn rtc_interrupt_handler(_stack_frame: InterruptStackFrame) {
     // 必須讀取 Register C 來清除 RTC 中斷標誌
-    crate::hal::rtc::handle_interrupt();
+    rtc::handle_interrupt();
     // 發送 EOI
-    crate::hal::lapic::send_eoi();
+    lapic::send_eoi();
 }

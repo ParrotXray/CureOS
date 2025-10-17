@@ -131,17 +131,19 @@ fn test_rtc_interrupt() {
             cpu::cpu_pause();
         }
 
+        rtc::update_time_cache();
+
         let current_count = rtc::get_tick_count();
         let delta = current_count - last_count;
         last_count = current_count;
         seconds += 1;
 
-        kprintln!("  [{}s] Total ticks: {}, Delta: {}, Rate: {} Hz",
+        log_info!("  [{}s] Total ticks: {}, Delta: {}, ticks: {}",
                   seconds, current_count, delta, delta);
         // Also show current time
-        // if let Some(time) = rtc::get_time() {
-        //     kprintln!("       Time: {}", time.format());
-        // }
+        if let Some(time) = rtc::get_time() {
+            log_info!("       Time: {}", time.format());
+        }
     }
 
     log_info!("RTC test complete!");
