@@ -35,10 +35,8 @@ lazy_static! {
         idt.simd_floating_point.set_handler_fn(simd_floating_point_handler);
         idt.virtualization.set_handler_fn(virtualization_handler);
 
-
-        // 硬件中斷 (32-255)
         // IRQ 0 (32)
-        idt[32].set_handler_fn(default_irq_handler);
+        idt[32].set_handler_fn(apic_timer_handler);
 
         // IRQ 1 (33) - Keyboard
         idt[33].set_handler_fn(keyboard_interrupt_handler);   // IRQ 1 Keyboard
@@ -46,7 +44,7 @@ lazy_static! {
         idt[40].set_handler_fn(rtc_interrupt_handler);  // IRQ 8
 
         for i in 34..=47 {
-            if i != 40 {  // 跳過 RTC
+            if i != 40 && i != 32 {
                 idt[i].set_handler_fn(default_irq_handler);
             }
         }

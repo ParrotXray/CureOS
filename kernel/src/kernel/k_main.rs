@@ -1,5 +1,5 @@
 // kernel/src/kernel/k_main.rs
-use crate::hal::{cpu, rtc};
+use crate::hal::{apic_timer, cpu, rtc};
 use crate::kprintln;
 use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
 use crate::mm::{vma, vmm};
@@ -37,54 +37,8 @@ pub fn _kernel_main() -> ! {
 
     kprintln!();
 
-    if let Some(apic_id) = crate::hal::lapic::get_apic_id() {
-        log_info!("Configuring hardware interrupts...");
-        log_info!("Current CPU APIC ID: {}", apic_id);
+    test_apic_timer();
 
-
-        log_info!("Setting up keyboard interrupt (IRQ 1 -> Vector 33)");
-        crate::hal::ioapic::set_irq_redirect(
-            1,                  // IRQ number (keyboard)
-            33,              // Interrupt vector number
-            apic_id as u8,         // APIC ID of target CPU
-            false,     // Edge triggered (false = edge, true = level)
-            false         // Active high (false = high, true = low)
-        );
-
-        // Unmask IRQ 1 (enable keyboard interrupt)
-        crate::hal::ioapic::unmask_irq(1);
-        log_info!("Keyboard interrupt unmasked");
-        log_info!("Setting up RTC interrupt (IRQ 8 -> Vector 40)");
-        crate::hal::ioapic::set_irq_redirect(
-            8,              // RTC is IRQ 8
-            40,             // Vector 40
-            apic_id as u8,
-            false,          // Edge triggered
-            false           // Active high
-        );
-
-        crate::hal::ioapic::unmask_irq(8);
-        log_info!("RTC interrupt unmasked");
-
-        log_info!("Enabling RTC timer interrupt (1024Hz)...");
-        // Reset counter
-        rtc::reset_tick_count();
-        rtc::enable_timer();
-
-        cpu::cpu_enable_interrupts();
-
-        log_info!("CPU interrupts enabled");
-
-        test_rtc_interrupt();
-
-        kprintln!();
-        log_info!("Interrupt system ready!");
-
-    } else {
-        log_error!("APIC not available, cannot enable keyboard");
-    }
-
-    kprintln!();
     log_info!("System initialization complete!");
     log_warn!("Entering idle loop...");
     kprintln!();
@@ -94,58 +48,24 @@ pub fn _kernel_main() -> ! {
     }
 }
 
-fn test_rtc_interrupt() {
-    log_info!("=== RTC Interrupt Test ===");
+pub fn test_apic_timer() {
 
+    log_info!("=== APIC Timer Test ===");
 
-    // Wait and check tick count
-    log_info!("Waiting for RTC interrupts...");
+    let start_ticks = apic_timer::get_tick_count();
 
-    let start_count = rtc::get_tick_count();
-
-    // Busy wait for ~1 second (approximately)
-    for _ in 0..1000000 {
+    // 等待約 1 秒
+    for _ in 0..1_000_000 {
         cpu::cpu_pause();
     }
 
-    let end_count = rtc::get_tick_count();
-    let ticks = end_count - start_count;
+    let end_ticks = apic_timer::get_tick_count();
+    let elapsed = end_ticks - start_ticks;
 
-    if ticks > 0 {
-        log_info!("RTC interrupt working! Received {} ticks", ticks);
-        log_info!("Expected: ~1024 ticks/second");
-        log_info!("Actual rate: {} Hz", ticks);
-    } else {
-        log_error!("RTC interrupt NOT working! No ticks received");
+    log_info!("Elapsed ticks: {}", elapsed);
+
+    if let Some((_, freq, _)) = apic_timer::get_info() {
+        log_info!("Expected ~{} ticks/sec", freq);
+        log_info!("Actual rate: {} Hz", elapsed);
     }
-
-    // Live counter display
-    log_info!("Live tick counter (press any key to continue):");
-
-    let mut last_count = rtc::get_tick_count();
-    let mut seconds = 0;
-
-    for _ in 0..5 {  // Display for 5 seconds
-        // Wait approximately 1 second
-        for _ in 0..1000000 {
-            cpu::cpu_pause();
-        }
-
-        rtc::update_time_cache();
-
-        let current_count = rtc::get_tick_count();
-        let delta = current_count - last_count;
-        last_count = current_count;
-        seconds += 1;
-
-        log_info!("  [{}s] Total ticks: {}, Delta: {}, ticks: {}",
-                  seconds, current_count, delta, delta);
-        // Also show current time
-        if let Some(time) = rtc::get_time() {
-            log_info!("       Time: {}", time.format());
-        }
-    }
-
-    log_info!("RTC test complete!");
-    kprintln!();
 }

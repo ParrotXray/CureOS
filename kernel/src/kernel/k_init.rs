@@ -12,7 +12,8 @@ use crate::klibc::logger::{init, LogLevel, LoggerConfig};
 use crate::klibc::malloc;
 use crate::{log_debug, log_error, log_info, log_trace, log_warn};
 use crate::drivers::keyboard;
-use crate::hal::{acpi, lapic, rtc};
+use crate::hal::{acpi, apic_timer, cpu, ioapic, lapic, rtc};
+use crate::hal::cpu::cpu_enable_interrupts;
 
 fn _logger_init() {
     init(
@@ -221,6 +222,39 @@ fn _post_init(
 
     rtc::init();
     keyboard::init();
+
+    if let Some(apic_id) = lapic::get_apic_id() {
+        log_info!("Setting up APIC Timer...");
+        log_info!("Current CPU APIC ID: {}", apic_id);
+
+        if apic_timer::init(100, apic_id as u8) {
+            log_info!("APIC Timer initialized successfully!");
+
+            // 顯示信息
+            if let Some((base, running, ticks)) = apic_timer::get_info() {
+                log_info!("Base freq: {} Hz", base);
+                log_info!("Running at: {} Hz", running);
+                log_info!("Current ticks: {}", ticks);
+            }
+        } else {
+            log_error!("Failed to initialize APIC Timer!");
+        }
+        
+        ioapic::set_irq_redirect(
+            1,                  // IRQ number (keyboard)
+            33,              // Interrupt vector number
+            apic_id as u8,         // APIC ID of target CPU
+            false,     // Edge triggered (false = edge, true = level)
+            false         // Active high (false = high, true = low)
+        );
+
+        log_info!("Configuring hardware interrupts...");
+        cpu_enable_interrupts();
+
+    } else {
+        log_error!("APIC not available, cannot enable keyboard");
+    }
+
     log_debug!("Cleanup completed");
 }
 

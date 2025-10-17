@@ -1,9 +1,10 @@
+use x86_64::instructions::port::Port;
 // kernel/src/kernel/asm/amd64/isr
 use x86_64::structures::idt::{InterruptStackFrame, PageFaultErrorCode};
 use x86_64::VirtAddr;
 use crate::{drivers, kprintln};
 use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
-use crate::hal::{cpu, lapic, rtc};
+use crate::hal::{apic_timer, cpu, lapic, rtc};
 use crate::mm::paging;
 
 /// Divide Error (#DE)
@@ -247,7 +248,6 @@ pub extern "x86-interrupt" fn virtualization_handler(stack_frame: InterruptStack
 // TODO Timer interrupt, Keyboard interrupt
 
 pub extern "x86-interrupt" fn keyboard_interrupt_handler(stack_frame: InterruptStackFrame) {
-    use x86_64::instructions::port::Port;
 
     unsafe {
         let mut port = Port::new(0x60);
@@ -265,9 +265,26 @@ pub extern "x86-interrupt" fn default_irq_handler(stack_frame: InterruptStackFra
 }
 
 
-pub extern "x86-interrupt" fn rtc_interrupt_handler(_stack_frame: InterruptStackFrame) {
-    // 必須讀取 Register C 來清除 RTC 中斷標誌
-    rtc::handle_interrupt();
-    // 發送 EOI
+pub extern "x86-interrupt" fn apic_timer_handler(_stack_frame: InterruptStackFrame) {
+
+    // log_info!("Processing of APIC Timer Calibration Phase");
+    if apic_timer::is_calibrating() {
+        apic_timer::apic_calibration_handler();
+    } else {
+        apic_timer::timer_tick_handler();
+    }
+
     lapic::send_eoi();
 }
+
+pub extern "x86-interrupt" fn rtc_interrupt_handler(_stack_frame: InterruptStackFrame) {
+    rtc::handle_interrupt();
+
+    // log_info!("Processing of APIC Timer Calibration Phase");
+    if apic_timer::is_calibrating() {
+        apic_timer::rtc_calibration_handler();
+    }
+
+    lapic::send_eoi();
+}
+

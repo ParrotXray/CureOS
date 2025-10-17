@@ -1,4 +1,5 @@
-// kernel/src/hal/lapic.rs
+// kernel/src/hal/lapic.rs - 添加公開 API
+
 use x86_64::{PhysAddr, VirtAddr};
 use spin::Mutex;
 use crate::{log_trace, log_debug, log_info, log_warn, log_error};
@@ -8,7 +9,7 @@ use crate::mm::vma;
 #[repr(u32)]
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
-enum ApicRegister {
+pub enum ApicRegister {
     Id = 0x20,
     Version = 0x30,
     TaskPriority = 0x80,
@@ -31,13 +32,14 @@ enum ApicRegister {
 
 /// APIC configuration flags
 #[allow(dead_code)]
-mod flags {
+pub mod flags {
     pub const APIC_ENABLE: u32 = 0x100;
     pub const APIC_SW_ENABLE: u32 = 0x100;
     pub const APIC_SPURIOUS_ALL: u32 = 0xFF;
 
     pub const LVT_MASKED: u32 = 1 << 16;
     pub const LVT_TIMER_PERIODIC: u32 = 1 << 17;
+    pub const LVT_TIMER_ONESHOT: u32 = 0 << 17;
 }
 
 pub struct LocalApic {
@@ -58,21 +60,26 @@ impl LocalApic {
     }
 
     /// Read APIC registers
-    unsafe fn read(&self, reg: ApicRegister) -> u32 {
+    pub unsafe fn read(&self, reg: ApicRegister) -> u32 {
         let addr = self.base_vaddr.as_u64() + reg as u64;
         core::ptr::read_volatile(addr as *const u32)
     }
 
     /// Write to APIC register
-    unsafe fn write(&mut self, reg: ApicRegister, value: u32) {
+    pub unsafe fn write(&mut self, reg: ApicRegister, value: u32) {
         let addr = self.base_vaddr.as_u64() + reg as u64;
         core::ptr::write_volatile(addr as *mut u32, value);
+    }
+
+    /// Get base virtual address
+    pub fn base_vaddr(&self) -> VirtAddr {
+        self.base_vaddr
     }
 
     /// Initialize Local APIC
     pub unsafe fn init(&mut self) {
         // Enable APIC (via Spurious Interrupt Vector Register)
-        let spurious = flags::APIC_SW_ENABLE | 0xFF; // IRQ 0xFF 作为 spurious vector
+        let spurious = flags::APIC_SW_ENABLE | 0xFF;
         self.write(ApicRegister::SpuriousInterruptVector, spurious);
 
         // Set task priority to 0 (accept all interrupts)
@@ -159,6 +166,57 @@ pub fn send_eoi() {
 pub fn get_apic_id() -> Option<u32> {
     unsafe {
         LOCAL_APIC.lock().as_ref().map(|apic| apic.id())
+    }
+}
+
+/// Get the Local APIC base virtual address
+pub fn get_base_vaddr() -> Option<VirtAddr> {
+    LOCAL_APIC.lock().as_ref().map(|apic| apic.base_vaddr())
+}
+
+/// 公開的 APIC 寄存器讀取 API
+///
+/// # Safety
+/// 調用者必須確保 APIC 已正確初始化
+pub unsafe fn read_apic_reg(reg: ApicRegister) -> Option<u32> {
+    LOCAL_APIC.lock().as_ref().map(|apic| apic.read(reg))
+}
+
+/// 公開的 APIC 寄存器寫入 API
+///
+/// # Safety
+/// 調用者必須確保 APIC 已正確初始化
+pub unsafe fn write_apic_reg(reg: ApicRegister, value: u32) -> bool {
+    if let Some(apic) = LOCAL_APIC.lock().as_mut() {
+        apic.write(reg, value);
+        true
+    } else {
+        false
+    }
+}
+
+/// 直接通過偏移量讀取 APIC 寄存器（用於 apic_timer）
+///
+/// # Safety
+/// 調用者必須確保 APIC 已正確初始化且偏移量有效
+pub unsafe fn read_apic_reg_raw(offset: u32) -> Option<u32> {
+    LOCAL_APIC.lock().as_ref().map(|apic| {
+        let addr = apic.base_vaddr.as_u64() + offset as u64;
+        core::ptr::read_volatile(addr as *const u32)
+    })
+}
+
+/// 直接通過偏移量寫入 APIC 寄存器（用於 apic_timer）
+///
+/// # Safety
+/// 調用者必須確保 APIC 已正確初始化且偏移量有效
+pub unsafe fn write_apic_reg_raw(offset: u32, value: u32) -> bool {
+    if let Some(apic) = LOCAL_APIC.lock().as_ref() {
+        let addr = apic.base_vaddr.as_u64() + offset as u64;
+        core::ptr::write_volatile(addr as *mut u32, value);
+        true
+    } else {
+        false
     }
 }
 
