@@ -4,6 +4,7 @@ use spin::Mutex;
 use crate::{kprint, kprintln, tty, hal::{rtc, timer}};
 
 pub mod commands;
+pub mod math;
 
 static COMMAND_BUFFER: Mutex<String> = Mutex::new(String::new());
 
@@ -12,7 +13,7 @@ pub fn init() {
 }
 
 pub fn show_prompt() {
-    kprint!("cure > ");
+    tty::tty::write_str("cure > ", 0x00FF00);
 }
 
 pub fn process_keyboard_char(c: char) {
@@ -37,23 +38,29 @@ pub fn process_keyboard_char(c: char) {
 }
 
 fn execute_command(cmd: &str) {
-    let cmd = cmd.trim();
+    let mut cmd = cmd.trim();
 
     if cmd.is_empty() {
         return;
     }
-
+    
     match cmd {
         "help" => commands::cmd_help(),
-        "clear" => commands::cmd_clear(),
+        "clear" | "clr" => commands::cmd_clear(),
         "time" => commands::cmd_time(),
         "uptime" => commands::cmd_uptime(),
-        "sysinfo" => commands::cmd_sysinfo(),
+        "sysinfo" | "sys"  => commands::cmd_sysinfo(),
+        "meminfo" | "mem" => commands::cmd_meminfo(),
         "reboot" => commands::cmd_reboot(),
-        "halt" | "shutdown" | "poweroff" => commands::cmd_halt(),
+        "halt" | "shutdown" | "poweroff" => commands::cmd_shutdown(),
         _ => {
-            kprintln!("Unknown command: '{}'", cmd);
-            kprintln!("Type 'help' for available commands");
+            match math::eval_expression(cmd) {
+                Ok(result) => kprintln!("{}", result),
+                Err(_) => {
+                    kprintln!("Unknown command: '{}'", cmd);
+                    kprintln!("Type 'help' for available commands");
+                }
+            }
         }
     }
 }

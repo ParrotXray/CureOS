@@ -94,14 +94,10 @@ fn _memory_init(
 fn _display_init(framebuffer: &'static mut bootloader_api::info::FrameBuffer) {
     tty::init(framebuffer);
     tty::clear(0x000000);
-
-    kprintln!("========================================");
-    kprintln!("       CureOS Kernel v0.1.0"             );
-    kprintln!("========================================");
-    kprintln!();
 }
 
 fn _boot_report(memory_regions: &bootloader_api::info::MemoryRegions, physical_memory_offset: u64) {
+    kprintln!();
     log_info!("GDT initialized");
     gdt::print_info();
 
@@ -144,8 +140,8 @@ fn _acpi_init(rsdp_addr: Option<u64>, physical_memory_offset: u64) -> Option<acp
     if let Some(rsdp) = rsdp_addr {
         log_debug!("RSDP Address: {:#x}", rsdp);
 
-        if let Some(acpi_info) = acpi::init(rsdp, physical_memory_offset) {
-            acpi::print_info(&acpi_info);
+        if let Some(acpi_info) = acpi::init::init(rsdp, physical_memory_offset) {
+            acpi::init::print_info(&acpi_info);
             return Some(acpi_info);
         } else {
             log_warn!("ACPI initialization failed");
@@ -284,9 +280,7 @@ pub fn _kernel_init(boot_info: &'static mut BootInfo) -> ! {
         _boot_report(&boot_info.memory_regions, physical_memory_offset);
 
         kprintln!();
-        kprintln!("========================================");
-        kprintln!("  Kernel Initialization Complete!       ");
-        kprintln!("========================================");
+        log_info!("System initialization complete!");
         kprintln!();
 
         k_main::_kernel_main();

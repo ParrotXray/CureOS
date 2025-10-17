@@ -38,7 +38,7 @@ static TICK_COUNTER: AtomicU64 = AtomicU64::new(0);
 // Calibration flag
 static IS_CALIBRATING: AtomicBool = AtomicBool::new(false);
 
-static TIMEOUT: AtomicU64 = AtomicU64::new(0);
+static TIMEOUT: AtomicU64 = AtomicU64::new(100_000_000);
 
 struct TimerConfig {
     base_frequency: u32,
@@ -143,15 +143,14 @@ pub fn init(target_frequency: u32, apic_id: u8) -> bool {
 
     cpu::cpu_enable_interrupts();
 
-    let mut timeout = 100_000_000;
-    while !unsafe { CALIBRATION.done } && timeout > 0 {
+    let mut remaining = TIMEOUT.load(Ordering::Relaxed);
+    while !unsafe { CALIBRATION.done } && remaining > 0 {
         cpu::cpu_pause(0);
-        timeout -= 1;
+        remaining -= 1;
     }
-
     cpu::cpu_disable_interrupts();
 
-    if timeout == 0 {
+    if remaining == 0 {
         log_error!("Calibration timeout!");
         IS_CALIBRATING.store(false, Ordering::SeqCst);
         return false;

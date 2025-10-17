@@ -1,12 +1,14 @@
-use acpi::{aml, AcpiTables, Handle, Handler, PciAddress, PhysicalMapping};
-use acpi::platform::{AcpiPlatform, interrupt::InterruptModel, PciConfigRegions};
+pub mod power;
+pub mod init;
+
+use acpi::{aml, sdt, AcpiTables, Handle, Handler, PciAddress, PhysicalMapping};
 use acpi::sdt::hpet::HpetInfo;
-use acpi::rsdp::Rsdp;
 use core::ptr::NonNull;
 use core::mem;
 use crate::kprintln;
 use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
 use crate::hal::{cpu, io};
+
 
 #[derive(Clone, Copy)]
 pub struct CureAcpiHandler {
@@ -22,6 +24,17 @@ pub struct AcpiInfo {
     pub local_apic_address: Option<u64>,
     pub io_apics: alloc::vec::Vec<(u64, u8, u32)>, // (address, id, gsi_base)
 }
+
+/// ACPI 關機所需的信息
+pub struct AcpiPowerInfo {
+    pub pm1a_control_block: u32,
+    pub pm1b_control_block: u32,
+    pub slp_typa: u16,
+    pub slp_typb: u16,
+    pub slp_en: u16,
+}
+
+static mut ACPI_POWER_INFO: Option<AcpiPowerInfo> = None;
 
 impl CureAcpiHandler {
     pub const fn new(physical_memory_offset: u64) -> Self {
@@ -170,7 +183,7 @@ impl Handler for CureAcpiHandler {
     fn stall(&self, _microseconds: u64) {
         // TODO: 實作微秒級延遲
         // 簡單的忙等待實作
-       cpu::cpu_pause(_microseconds * 1000);
+        cpu::cpu_pause(_microseconds * 1000);
 
     }
 
@@ -180,10 +193,10 @@ impl Handler for CureAcpiHandler {
         self.stall(_milliseconds * 1000);
     }
 
-    fn create_mutex(&self) -> acpi::Handle {
+    fn create_mutex(&self) -> Handle {
         // TODO: 實作 Mutex
         // 目前返回一個假的 handle
-        acpi::Handle(0)
+        Handle(0)
     }
 
     fn acquire(&self, mutex: Handle, timeout: u16) -> Result<(), aml::AmlError> {
@@ -192,134 +205,7 @@ impl Handler for CureAcpiHandler {
         Ok(())
     }
 
-    fn release(&self, _handle: acpi::Handle) {
+    fn release(&self, _handle: Handle) {
         // TODO: 實作 Mutex 釋放
     }
-}
-
-pub fn init(rsdp_addr: u64, physical_memory_offset: u64) -> Option<AcpiInfo> {
-
-    let handler = CureAcpiHandler::new(physical_memory_offset);
-
-    let rsdp_mapping = unsafe {
-        handler.map_physical_region::<Rsdp>(rsdp_addr as usize, mem::size_of::<Rsdp>())
-    };
-    let revision = rsdp_mapping.revision();
-    log_info!("ACPI Revision: {}", revision);
-
-    let tables = unsafe {
-        match AcpiTables::from_rsdp(handler, rsdp_addr as usize) {
-            Ok(tables) => tables,
-            Err(e) => {
-                log_error!("Failed to parse ACPI tables: {:?}", e);
-                return None;
-            }
-        }
-    };
-
-    let platform = match AcpiPlatform::new(tables, handler) {
-        Ok(platform) => platform,
-        Err(e) => {
-            log_error!("Failed to create ACPI platform: {:?}", e);
-            return None;
-        }
-    };
-
-    log_info!("Power Profile: {:?}", platform.power_profile);
-
-    let (boot_processor, cpu_count) = if let Some(proc_info) = &platform.processor_info {
-        let boot_proc = Some(proc_info.boot_processor.processor_uid);
-        let cpu_cnt = proc_info.application_processors.len() + 1;
-
-        log_info!("Boot Processor UID: {:?}", boot_proc);
-        log_info!("Total CPU Count: {}", cpu_cnt);
-
-        (boot_proc, cpu_cnt)
-    } else {
-        log_warn!("No processor info found");
-        (None, 0)
-    };
-
-    // Check interrupt mode
-    let (has_apic, local_apic_addr, io_apics_info) = match &platform.interrupt_model {
-        InterruptModel::Apic(apic) => {
-            log_info!("Local APIC Address: {:#x}", apic.local_apic_address);
-            log_info!("IO APICs: {} controller(s)", apic.io_apics.len());
-
-            let mut io_apics = alloc::vec::Vec::new();
-
-            for (i, io_apic) in apic.io_apics.iter().enumerate() {
-                log_info!("IO APIC {}: ID={}, Address={:#x}, GSI Base={}",
-                    i, io_apic.id, io_apic.address, io_apic.global_system_interrupt_base);
-
-                io_apics.push((
-                    io_apic.address as u64,
-                    io_apic.id,
-                    io_apic.global_system_interrupt_base,
-                ));
-            }
-
-            (true, Some(apic.local_apic_address as u64), io_apics)
-        }
-        InterruptModel::Unknown => {
-            log_warn!("Interrupt Model: Unknown (not APIC)");
-            (false, None, alloc::vec::Vec::new())
-        }
-        _ => {
-            log_warn!("Interrupt Model: Other");
-            (false, None, alloc::vec::Vec::new())
-        }
-    };
-
-    let has_hpet = match HpetInfo::new(&platform.tables) {
-        Ok(hpet) => {
-            log_info!("Base Address: {:#x}", hpet.base_address);
-            log_info!("Hardware Rev: {}", hpet.hardware_rev);
-            log_info!("Comparator Count: {}", hpet.num_comparators);
-            log_info!("Counter Size: {} bit", if hpet.main_counter_is_64bits { 64 } else { 32 });
-            log_info!("Legacy IRQ Capable: {}", hpet.legacy_irq_capable);
-            log_info!("PCI Vendor ID: {:#x}", hpet.pci_vendor_id);
-            true
-        }
-        Err(_) => {
-            log_warn!("HPET: Not available");
-            false
-        }
-    };
-
-    if let Ok(mcfg) = PciConfigRegions::new(&platform.tables) {
-        for (i, entry) in mcfg.regions.iter().enumerate() {
-            let segment_group = entry.pci_segment_group;
-            let base_addr = entry.base_address;
-            let bus_start = entry.bus_number_start;
-            let bus_end = entry.bus_number_end;
-
-            log_info!("Entry {}: Segment Group {}", i, segment_group);
-            log_info!("Base Address: {:#x}", base_addr);
-            log_info!("Bus Range: {}-{}", bus_start, bus_end);
-        }
-    }
-
-    log_info!("ACPI initialized successfully!");
-
-    Some(AcpiInfo {
-        revision,
-        boot_processor,
-        cpu_count,
-        has_apic,
-        has_hpet,
-        local_apic_address: local_apic_addr,
-        io_apics: io_apics_info,
-    })
-}
-
-pub fn print_info(info: &AcpiInfo) {
-    kprintln!();
-    log_info!("Revision: ACPI {}.0", info.revision);
-    log_info!("CPUs: {} processor(s)", info.cpu_count);
-    if let Some(boot_proc) = info.boot_processor {
-        log_info!("Boot Processor: UID {}", boot_proc);
-    }
-    log_info!("APIC: {}", if info.has_apic { "Available " } else { "Not available" });
-    log_info!("HPET: {}", if info.has_hpet { "Available " } else { "Not available" });
 }

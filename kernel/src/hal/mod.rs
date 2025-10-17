@@ -5,3 +5,4 @@ pub mod rtc;
 pub mod lapic;
 pub mod ioapic;
 pub mod timer;
+pub mod power;

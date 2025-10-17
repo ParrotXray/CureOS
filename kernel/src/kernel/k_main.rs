@@ -30,11 +30,7 @@ pub fn _kernel_main() -> ! {
     if let time = rtc::get_time() {
         kprintln!("Date/Time:  {}", time.format());
     }
-
-    log_info!("{}", cpu::cpu_rdtscp()) ;
-    kprintln!();
-
-    log_info!("System initialization complete!");
+    
     kprintln!();
     kprintln!("Type 'help' for available commands");
     kprintln!();
