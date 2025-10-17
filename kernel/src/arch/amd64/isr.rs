@@ -4,7 +4,7 @@ use x86_64::structures::idt::{InterruptStackFrame, PageFaultErrorCode};
 use x86_64::VirtAddr;
 use crate::{drivers, kprintln};
 use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
-use crate::hal::{apic_timer, cpu, lapic, rtc};
+use crate::hal::{timer, cpu, lapic, rtc};
 use crate::mm::paging;
 
 /// Divide Error (#DE)
@@ -268,10 +268,10 @@ pub extern "x86-interrupt" fn default_irq_handler(stack_frame: InterruptStackFra
 pub extern "x86-interrupt" fn apic_timer_handler(_stack_frame: InterruptStackFrame) {
 
     // log_info!("Processing of APIC Timer Calibration Phase");
-    if apic_timer::is_calibrating() {
-        apic_timer::apic_calibration_handler();
+    if timer::is_calibrating() {
+        timer::apic_calibration_handler();
     } else {
-        apic_timer::timer_tick_handler();
+        timer::timer_tick_handler();
     }
 
     lapic::send_eoi();
@@ -281,8 +281,8 @@ pub extern "x86-interrupt" fn rtc_interrupt_handler(_stack_frame: InterruptStack
     rtc::handle_interrupt();
 
     // log_info!("Processing of APIC Timer Calibration Phase");
-    if apic_timer::is_calibrating() {
-        apic_timer::rtc_calibration_handler();
+    if timer::is_calibrating() {
+        timer::rtc_calibration_handler();
     }
 
     lapic::send_eoi();

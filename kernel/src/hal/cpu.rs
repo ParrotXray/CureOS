@@ -3,8 +3,7 @@ use x86_64::registers::control::{Cr0, Cr0Flags, Cr2, Cr3, Cr4, Cr4Flags};
 use x86_64::instructions::{interrupts, hlt};
 use core::arch::asm;
 use raw_cpuid::CpuId;
-use x86_64::{PhysAddr, structures::paging::PhysFrame};
-use x86_64::VirtAddr;
+use x86_64::{PhysAddr, structures::paging::PhysFrame, registers};
 
 /// 64-bit register type
 #[allow(dead_code)]
@@ -197,15 +196,15 @@ pub fn cpu_get_brand(brand_out: &mut [u8]) -> &str {
 /// The timestamp count value
 #[allow(dead_code)]
 #[inline]
-pub fn cpu_rdtsc() -> u64 {
+pub fn cpu_rdtscp() -> u64 {
     unsafe {
         let low: u32;
         let high: u32;
         asm!(
-        "rdtsc",
+        "rdtscp",
         out("eax") low,
         out("edx") high,
-        options(nomem, nostack, preserves_flags)
+        options(nomem, nostack, preserves_flags, att_syntax)
         );
         ((high as u64) << 32) | (low as u64)
     }
@@ -214,8 +213,19 @@ pub fn cpu_rdtsc() -> u64 {
 /// Execute CPU pause instruction (reduce power consumption)
 #[allow(dead_code)]
 #[inline]
-pub fn cpu_pause() {
-    core::hint::spin_loop();
+pub fn cpu_pause(ms: u64) {
+    if ms == 0 {
+        core::hint::spin_loop();
+        return;
+    }
+
+    let start = cpu_rdtscp();
+    let target = start + ms * 1000;
+
+    while cpu_rdtscp() < target {
+        core::hint::spin_loop();
+    }
+
 }
 
 /// Stop CPU execution until the next interrupt occurs
@@ -276,12 +286,12 @@ where
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_breakpoint() {
-    x86_64::instructions::interrupts::int3();
+    interrupts::int3();
 }
 
 /// Read the RFLAGS register
 #[allow(dead_code)]
 #[inline]
 pub fn cpu_read_flags() -> u64 {
-    x86_64::registers::rflags::read().bits()
+    registers::rflags::read().bits()
 }

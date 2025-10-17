@@ -12,7 +12,7 @@ use crate::klibc::logger::{init, LogLevel, LoggerConfig};
 use crate::klibc::malloc;
 use crate::{log_debug, log_error, log_info, log_trace, log_warn};
 use crate::drivers::keyboard;
-use crate::hal::{acpi, apic_timer, cpu, ioapic, lapic, rtc};
+use crate::hal::{acpi, timer, cpu, ioapic, lapic, rtc};
 use crate::hal::cpu::cpu_enable_interrupts;
 
 fn _logger_init() {
@@ -206,7 +206,7 @@ fn _post_init(
                             frame_allocator,
                         ) {
                             log_debug!("IO APIC {} mapped to virtual address: {:#x}", id, vaddr.as_u64());
-                            crate::hal::ioapic::init_single_ioapic(vaddr, *id, *gsi_base);
+                            ioapic::init_single_ioapic(vaddr, *id, *gsi_base);
                         } else {
                             log_error!("Failed to map IO APIC {} memory", id);
                         }
@@ -227,11 +227,11 @@ fn _post_init(
         log_info!("Setting up APIC Timer...");
         log_info!("Current CPU APIC ID: {}", apic_id);
 
-        if apic_timer::init(100, apic_id as u8) {
+        if timer::init(100, apic_id as u8) {
             log_info!("APIC Timer initialized successfully!");
 
             // 顯示信息
-            if let Some((base, running, ticks)) = apic_timer::get_info() {
+            if let Some((base, running, ticks)) = timer::get_info() {
                 log_info!("Base freq: {} Hz", base);
                 log_info!("Running at: {} Hz", running);
                 log_info!("Current ticks: {}", ticks);
@@ -239,7 +239,7 @@ fn _post_init(
         } else {
             log_error!("Failed to initialize APIC Timer!");
         }
-        
+
         ioapic::set_irq_redirect(
             1,                  // IRQ number (keyboard)
             33,              // Interrupt vector number

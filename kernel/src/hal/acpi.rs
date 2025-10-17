@@ -6,6 +6,7 @@ use core::ptr::NonNull;
 use core::mem;
 use crate::kprintln;
 use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
+use crate::hal::{cpu, io};
 
 #[derive(Clone, Copy)]
 pub struct CureAcpiHandler {
@@ -36,7 +37,7 @@ impl Handler for CureAcpiHandler {
         physical_address: usize,
         size: usize,
     ) -> PhysicalMapping<Self, T> {
-        // Bootloader 已經映射了所有物理記憶體
+        // Bootloader has mapped all physical memory
         let virtual_address = physical_address as u64 + self.physical_memory_offset;
         let virtual_start = NonNull::new((virtual_address) as *mut T).unwrap();
 
@@ -110,27 +111,27 @@ impl Handler for CureAcpiHandler {
     }
 
     fn read_io_u8(&self, port: u16) -> u8 {
-        unsafe { crate::hal::io::io_port_rb(port) }
+        unsafe { io::io_port_rb(port) }
     }
 
     fn read_io_u16(&self, port: u16) -> u16 {
-        unsafe { crate::hal::io::io_port_rw(port) }
+        unsafe { io::io_port_rw(port) }
     }
 
     fn read_io_u32(&self, port: u16) -> u32 {
-        unsafe { crate::hal::io::io_port_rl(port) }
+        unsafe { io::io_port_rl(port) }
     }
 
     fn write_io_u8(&self, port: u16, value: u8) {
-        unsafe { crate::hal::io::io_port_wb(port, value) };
+        unsafe { io::io_port_wb(port, value) };
     }
 
     fn write_io_u16(&self, port: u16, value: u16) {
-        unsafe { crate::hal::io::io_port_ww(port, value) };
+        unsafe { io::io_port_ww(port, value) };
     }
 
     fn write_io_u32(&self, port: u16, value: u32) {
-        unsafe { crate::hal::io::io_port_wl(port, value) };
+        unsafe { io::io_port_wl(port, value) };
     }
 
     fn read_pci_u8(&self, address: PciAddress, offset: u16) -> u8 {
@@ -169,9 +170,8 @@ impl Handler for CureAcpiHandler {
     fn stall(&self, _microseconds: u64) {
         // TODO: 實作微秒級延遲
         // 簡單的忙等待實作
-        for _ in 0..(_microseconds * 1000) {
-            crate::hal::cpu::cpu_pause();
-        }
+       cpu::cpu_pause(_microseconds * 1000);
+
     }
 
     fn sleep(&self, _milliseconds: u64) {
@@ -240,7 +240,7 @@ pub fn init(rsdp_addr: u64, physical_memory_offset: u64) -> Option<AcpiInfo> {
         (None, 0)
     };
 
-    // 檢查中斷模型
+    // Check interrupt mode
     let (has_apic, local_apic_addr, io_apics_info) = match &platform.interrupt_model {
         InterruptModel::Apic(apic) => {
             log_info!("Local APIC Address: {:#x}", apic.local_apic_address);

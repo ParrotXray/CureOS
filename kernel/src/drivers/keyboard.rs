@@ -1,6 +1,6 @@
 // kernel/src/drivers/keyboard.rs
 use spin::Mutex;
-use crate::{kprintln, log_debug, log_info};
+use crate::{kprintln, log_debug, log_info, shell, tty};
 
 /// Keyboard scancode to ASCII mapping table (US keyboard layout)
 static SCANCODE_TO_ASCII: [u8; 128] = [
@@ -192,7 +192,7 @@ pub fn handle_scancode(raw: u8) {
         match ascii {
             b'c' | b'C' => { kprintln!("^C"); return; }
             b'd' | b'D' => { kprintln!("^D"); return; }
-            b'l' | b'L' => { crate::tty::tty::clear(0x000000); return; }
+            b'l' | b'L' => { tty::tty::clear(0x000000); return; }
             _ => {}
         }
     }
@@ -202,14 +202,12 @@ pub fn handle_scancode(raw: u8) {
 
 /// Print a character to the screen
 fn print_char(c: u8) {
-    use crate::kprint;
-
     if c == b'\n' {
-        kprintln!();
-    } else if c == 8 {
-        kprint!("\x08");
+        shell::process_keyboard_char('\n');
+    } else if c == 8 {  // Backspace
+        shell::process_keyboard_char('\x08');
     } else if c.is_ascii_graphic() || c == b' ' {
-        kprint!("{}", c as char);
+        shell::process_keyboard_char(c as char);
     }
 }
 

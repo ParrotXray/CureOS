@@ -1,9 +1,7 @@
-// kernel/src/hal/ioapic.rs
-use x86_64::{PhysAddr, VirtAddr};
-use spin::Mutex;
-use alloc::vec::Vec;
+// kernel/src/hal/ioapic.rs - 無鎖設計
+
+use x86_64::VirtAddr;
 use crate::{log_trace, log_debug, log_info, log_warn, log_error};
-use crate::mm::vma;
 
 /// IO APIC register selector
 const IOREGSEL: u32 = 0x00;
@@ -32,40 +30,25 @@ mod redir_flags {
     pub const DELIVERY_LOWEST: u64 = 1 << 8;
 }
 
-pub struct IoApic {
+// Supports up to 8 IO APICs
+const MAX_IOAPICS: usize = 8;
+
+//IO APIC information array (read-only after initialization)
+static mut IO_APICS: [Option<IoApicInfo>; MAX_IOAPICS] = [None; MAX_IOAPICS];
+static mut IO_APIC_COUNT: usize = 0;
+
+#[derive(Debug, Clone, Copy)]
+struct IoApicInfo {
     base_vaddr: VirtAddr,
     id: u8,
     gsi_base: u32,
     max_redirection_entries: u8,
 }
 
-static IO_APICS: Mutex<Vec<IoApic>> = Mutex::new(Vec::new());
-
-impl IoApic {
-    /// Create IO APIC from physical address
-    pub unsafe fn new(base_paddr: PhysAddr, id: u8, gsi_base: u32) -> Self {
-        let base_vaddr = vma::phys_to_virt(base_paddr.as_u64());
-
-        log_debug!("IO APIC {} physical base: {:#x}", id, base_paddr.as_u64());
-        log_debug!("IO APIC {} virtual base: {:#x}", id, base_vaddr.as_u64());
-        log_debug!("IO APIC {} GSI base: {}", id, gsi_base);
-
-        let mut ioapic = Self {
-            base_vaddr,
-            id,
-            gsi_base,
-            max_redirection_entries: 0,
-        };
-
-        // Read version information to get the maximum number of redirect entries
-        let version = ioapic.read(reg::VER);
-        ioapic.max_redirection_entries = ((version >> 16) & 0xFF) as u8 + 1;
-
-        ioapic
-    }
-
-    /// Read IO APIC registers
-    unsafe fn read(&mut self, reg: u8) -> u32 {
+impl IoApicInfo {
+    /// Read IO APIC register
+    #[inline]
+    unsafe fn read(&self, reg: u8) -> u32 {
         let regsel_addr = self.base_vaddr.as_u64() + IOREGSEL as u64;
         let win_addr = self.base_vaddr.as_u64() + IOWIN as u64;
 
@@ -73,8 +56,9 @@ impl IoApic {
         core::ptr::read_volatile(win_addr as *const u32)
     }
 
-    /// Writing to IO APIC registers
-    unsafe fn write(&mut self, reg: u8, value: u32) {
+    /// Write to IO APIC register
+    #[inline]
+    unsafe fn write(&self, reg: u8, value: u32) {
         let regsel_addr = self.base_vaddr.as_u64() + IOREGSEL as u64;
         let win_addr = self.base_vaddr.as_u64() + IOWIN as u64;
 
@@ -82,8 +66,9 @@ impl IoApic {
         core::ptr::write_volatile(win_addr as *mut u32, value);
     }
 
-    /// Read redirection table entries
-    unsafe fn read_redirection_entry(&mut self, irq: u8) -> u64 {
+    /// Read the redirection table entry
+    #[inline]
+    unsafe fn read_redirection_entry(&self, irq: u8) -> u64 {
         if irq >= self.max_redirection_entries {
             log_warn!("IRQ {} out of range for IO APIC {}", irq, self.id);
             return 0;
@@ -99,7 +84,8 @@ impl IoApic {
     }
 
     /// Write redirection table entry
-    unsafe fn write_redirection_entry(&mut self, irq: u8, entry: u64) {
+    #[inline]
+    unsafe fn write_redirection_entry(&self, irq: u8, entry: u64) {
         if irq >= self.max_redirection_entries {
             log_warn!("IRQ {} out of range for IO APIC {}", irq, self.id);
             return;
@@ -114,137 +100,76 @@ impl IoApic {
         self.write(high_reg, high);
         self.write(low_reg, low);
     }
-
-    /// Initialize the IO APIC
-    pub unsafe fn init(&mut self) {
-        // Mask all interrupts
-        for irq in 0..self.max_redirection_entries {
-            let entry = redir_flags::MASKED;
-            self.write_redirection_entry(irq, entry);
-        }
-
-        log_info!("IO APIC {} initialized, {} entries", self.id, self.max_redirection_entries);
-    }
-
-    /// Configure IRQ redirection
-    ///
-    /// # Parameters
-    /// - `irq`: IRQ number (0-23)
-    /// - `vector`: Interrupt vector number (32-255)
-    /// - `dest_apic_id`: Destination Local APIC ID
-    /// - `level_triggered`: true = level triggered, false = edge triggered
-    /// - `active_low`: true = active low, false = active high
-    pub unsafe fn set_irq_redirect(
-        &mut self,
-        irq: u8,
-        vector: u8,
-        dest_apic_id: u8,
-        level_triggered: bool,
-        active_low: bool,
-    ) {
-        let mut entry: u64 = 0;
-
-        // Set target APIC ID (bits 56-63)
-        entry |= (dest_apic_id as u64) << 56;
-
-        // Set the trigger mode
-        if level_triggered {
-            entry |= redir_flags::TRIGGER_LEVEL;
-        }
-
-        // Setting Polarity
-        if active_low {
-            entry |= redir_flags::POLARITY_LOW;
-        }
-
-        // Set the delivery mode to Fixed
-        entry |= redir_flags::DELIVERY_FIXED;
-
-        // Set the target mode to Physical
-        entry |= redir_flags::DEST_PHYSICAL;
-
-        // Set vector number
-        entry |= vector as u64;
-
-        // Write redirection table (unmask)
-        self.write_redirection_entry(irq, entry);
-
-        log_info!(
-            "IO APIC {} IRQ {} -> Vector {} (APIC {}, {}, {})",
-            self.id,
-            irq,
-            vector,
-            dest_apic_id,
-            if level_triggered { "level" } else { "edge" },
-            if active_low { "low" } else { "high" }
-        );
-    }
-
-    /// masked IRQ
-    pub unsafe fn mask_irq(&mut self, irq: u8) {
-        let mut entry = self.read_redirection_entry(irq);
-        entry |= redir_flags::MASKED;
-        self.write_redirection_entry(irq, entry);
-
-        log_debug!("IO APIC {} IRQ {} masked", self.id, irq);
-    }
-
-    /// unmasked IRQ
-    pub unsafe fn unmask_irq(&mut self, irq: u8) {
-        let mut entry = self.read_redirection_entry(irq);
-        entry &= !redir_flags::MASKED;
-        self.write_redirection_entry(irq, entry);
-
-        log_debug!("IO APIC {} IRQ {} unmasked", self.id, irq);
-    }
-
-    /// Print IO APIC information
-    pub unsafe fn print_info(&mut self) {
-        let id = self.read(reg::ID) >> 24;
-        let version = self.read(reg::VER);
-        let apic_ver = version & 0xFF;
-
-        log_info!("IO APIC {} ID: {}", self.id, id);
-        log_info!("IO APIC {} Version: {:#x}", self.id, apic_ver);
-        log_info!("IO APIC {} Max Redirection Entries: {}", self.id, self.max_redirection_entries);
-        log_info!("IO APIC {} GSI Base: {}", self.id, self.gsi_base);
-    }
 }
 
-/// Initialize a single IO APIC (using mapped virtual address)
+/// Initialize a single IO APIC (using mapped virtual addresses)
+///
+/// # Safety
+/// Must be called after mapping the IO APIC memory.
 pub unsafe fn init_single_ioapic(base_vaddr: VirtAddr, id: u8, gsi_base: u32) {
-    let mut ioapic = IoApic {
+    if IO_APIC_COUNT >= MAX_IOAPICS {
+        log_error!("Too many IO APICs! Maximum {} supported", MAX_IOAPICS);
+        return;
+    }
+
+    log_debug!("Initializing IO APIC {} at {:#x}", id, base_vaddr.as_u64());
+
+    // Create a temporary structure to read the version information
+    let temp_info = IoApicInfo {
         base_vaddr,
         id,
         gsi_base,
         max_redirection_entries: 0,
     };
 
-    // Read version information to get the maximum number of redirect entries
-    let version = ioapic.read(reg::VER);
-    ioapic.max_redirection_entries = ((version >> 16) & 0xFF) as u8 + 1;
+    // Read version information to get the maximum number of entries
+    let version = temp_info.read(reg::VER);
+    let max_entries = ((version >> 16) & 0xFF) as u8 + 1;
 
-    ioapic.init();
-    ioapic.print_info();
+    // 創建完整的信息結構
+    let info = IoApicInfo {
+        base_vaddr,
+        id,
+        gsi_base,
+        max_redirection_entries: max_entries,
+    };
 
-    IO_APICS.lock().push(ioapic);
+    // Mask all interrupts
+    for irq in 0..max_entries {
+        info.write_redirection_entry(irq, redir_flags::MASKED);
+    }
+
+    // Store to global array
+    IO_APICS[IO_APIC_COUNT] = Some(info);
+    IO_APIC_COUNT += 1;
+
+    log_info!("IO APIC {} initialized, {} entries", id, max_entries);
+    print_single_ioapic_info(&info);
 }
 
-/// Initialize all IO APICs (from physical address, need to be mapped first)
-pub unsafe fn init_io_apics(io_apics: &[(PhysAddr, u8, u32)]) {
-    let mut apics = IO_APICS.lock();
+/// Initialize all IO APICs (from physical addresses)
+///
+/// # Safety
+/// The physical addresses must be correctly mapped.
+pub unsafe fn init_io_apics(io_apics: &[(x86_64::PhysAddr, u8, u32)]) {
+    log_info!("Initializing {} IO APIC(s)...", io_apics.len());
 
     for (paddr, id, gsi_base) in io_apics {
-        let mut ioapic = IoApic::new(*paddr, *id, *gsi_base);
-        ioapic.init();
-        ioapic.print_info();
-        apics.push(ioapic);
+        let vaddr = crate::mm::vma::phys_to_virt(paddr.as_u64());
+        init_single_ioapic(vaddr, *id, *gsi_base);
     }
 
     log_info!("All IO APICs initialized");
 }
 
-/// Configuring IRQ Redirection
+/// Configure IRQ redirection
+///
+/// # Parameters
+/// - `irq`: IRQ number (0-23)
+/// - `vector`: Interrupt vector number (32-255)
+/// - `dest_apic_id`: Destination Local APIC ID
+/// - `level_triggered`: true = level triggered, false = edge triggered
+/// - `active_low`: true = active low, false = active high
 pub fn set_irq_redirect(
     irq: u8,
     vector: u8,
@@ -253,17 +178,55 @@ pub fn set_irq_redirect(
     active_low: bool,
 ) {
     unsafe {
-        let mut apics = IO_APICS.lock();
-
         // Find the IO APIC responsible for this IRQ
-        for ioapic in apics.iter_mut() {
-            let gsi_start = ioapic.gsi_base as u8;
-            let gsi_end = gsi_start + ioapic.max_redirection_entries;
+        for i in 0..IO_APIC_COUNT {
+            if let Some(ioapic) = &IO_APICS[i] {
+                let gsi_start = ioapic.gsi_base as u8;
+                let gsi_end = gsi_start + ioapic.max_redirection_entries;
 
-            if irq >= gsi_start && irq < gsi_end {
-                let local_irq = irq - gsi_start;
-                ioapic.set_irq_redirect(local_irq, vector, dest_apic_id, level_triggered, active_low);
-                return;
+                if irq >= gsi_start && irq < gsi_end {
+                    let local_irq = irq - gsi_start;
+
+                    // Build redirection entry
+                    let mut entry: u64 = 0;
+
+                    // Set target APIC ID (bits 56-63)
+                    entry |= (dest_apic_id as u64) << 56;
+
+                    // Set the trigger mode
+                    if level_triggered {
+                        entry |= redir_flags::TRIGGER_LEVEL;
+                    }
+
+                    // Set polarity
+                    if active_low {
+                        entry |= redir_flags::POLARITY_LOW;
+                    }
+
+                    // Set the transfer mode to Fixed
+                    entry |= redir_flags::DELIVERY_FIXED;
+
+                    // Set the target mode to Physical
+                    entry |= redir_flags::DEST_PHYSICAL;
+
+                    // Set the vector number
+                    entry |= vector as u64;
+
+                    // Write to the redirection table (unmask)
+                    ioapic.write_redirection_entry(local_irq, entry);
+
+                    log_info!(
+                        "IO APIC {} IRQ {} -> Vector {} (APIC {}, {}, {})",
+                        ioapic.id,
+                        irq,
+                        vector,
+                        dest_apic_id,
+                        if level_triggered { "level" } else { "edge" },
+                        if active_low { "low" } else { "high" }
+                    );
+
+                    return;
+                }
             }
         }
 
@@ -271,18 +234,23 @@ pub fn set_irq_redirect(
     }
 }
 
-/// Block IRQ
+/// Mask IRQ
 pub fn mask_irq(irq: u8) {
     unsafe {
-        let mut apics = IO_APICS.lock();
-        for ioapic in apics.iter_mut() {
-            let gsi_start = ioapic.gsi_base as u8;
-            let gsi_end = gsi_start + ioapic.max_redirection_entries;
+        for i in 0..IO_APIC_COUNT {
+            if let Some(ioapic) = &IO_APICS[i] {
+                let gsi_start = ioapic.gsi_base as u8;
+                let gsi_end = gsi_start + ioapic.max_redirection_entries;
 
-            if irq >= gsi_start && irq < gsi_end {
-                let local_irq = irq - gsi_start;
-                ioapic.mask_irq(local_irq);
-                return;
+                if irq >= gsi_start && irq < gsi_end {
+                    let local_irq = irq - gsi_start;
+                    let mut entry = ioapic.read_redirection_entry(local_irq);
+                    entry |= redir_flags::MASKED;
+                    ioapic.write_redirection_entry(local_irq, entry);
+
+                    log_debug!("IO APIC {} IRQ {} masked", ioapic.id, irq);
+                    return;
+                }
             }
         }
     }
@@ -291,15 +259,49 @@ pub fn mask_irq(irq: u8) {
 /// Unmask IRQ
 pub fn unmask_irq(irq: u8) {
     unsafe {
-        let mut apics = IO_APICS.lock();
-        for ioapic in apics.iter_mut() {
-            let gsi_start = ioapic.gsi_base as u8;
-            let gsi_end = gsi_start + ioapic.max_redirection_entries;
+        for i in 0..IO_APIC_COUNT {
+            if let Some(ioapic) = &IO_APICS[i] {
+                let gsi_start = ioapic.gsi_base as u8;
+                let gsi_end = gsi_start + ioapic.max_redirection_entries;
 
-            if irq >= gsi_start && irq < gsi_end {
-                let local_irq = irq - gsi_start;
-                ioapic.unmask_irq(local_irq);
-                return;
+                if irq >= gsi_start && irq < gsi_end {
+                    let local_irq = irq - gsi_start;
+                    let mut entry = ioapic.read_redirection_entry(local_irq);
+                    entry &= !redir_flags::MASKED;
+                    ioapic.write_redirection_entry(local_irq, entry);
+
+                    log_debug!("IO APIC {} IRQ {} unmasked", ioapic.id, irq);
+                    return;
+                }
+            }
+        }
+    }
+}
+
+/// Print single IO APIC information
+fn print_single_ioapic_info(info: &IoApicInfo) {
+    unsafe {
+        let id = info.read(reg::ID) >> 24;
+        let version = info.read(reg::VER);
+        let apic_ver = version & 0xFF;
+
+        log_info!("ID: {}", id);
+        log_info!("Version: {:#x}", apic_ver);
+        log_info!("Max Entries: {}", info.max_redirection_entries);
+        log_info!("GSI Base: {}", info.gsi_base);
+    }
+}
+
+/// Print all IO APIC information
+pub fn print_info() {
+    unsafe {
+        log_info!("=== IO APIC Information ===");
+        log_info!("Total IO APICs: {}", IO_APIC_COUNT);
+
+        for i in 0..IO_APIC_COUNT {
+            if let Some(info) = &IO_APICS[i] {
+                log_info!("IO APIC {}:", i);
+                print_single_ioapic_info(info);
             }
         }
     }
