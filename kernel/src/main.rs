@@ -23,6 +23,7 @@ pub mod tty;
 pub mod kernel;
 pub mod drivers;
 pub mod shell;
+pub mod task;
 
 use hal::cpu;
 const CONFIG: BootloaderConfig = {
