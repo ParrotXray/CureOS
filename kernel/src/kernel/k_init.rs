@@ -9,12 +9,13 @@ use crate::tty::tty;
 use crate::kprintln;
 use crate::kernel::k_main;
 use crate::klibc::logger::{init, LogLevel, LoggerConfig};
-use crate::klibc::malloc;
+use crate::klibc::mem;
 use crate::{log_debug, log_error, log_info, log_trace, log_warn};
 use crate::drivers::keyboard;
 use crate::hal::{acpi, cpu, rtc, timer};
 use crate::hal::apic::{ioapic, lapic};
 use crate::hal::cpu::cpu_enable_interrupts;
+use crate::task::executor;
 
 fn _logger_init() {
     init(
@@ -64,7 +65,7 @@ fn _memory_init(
         let bitmap_size = ((usable_end - usable_start) / 4096 + 7) / 8;
         let bitmap_pages = (bitmap_size as usize + 4095) / 4096;
 
-        if let Some(bitmap_addr) = malloc::kmalloc(
+        if let Some(bitmap_addr) = mem::kmalloc(
             bitmap_pages * 4096,
             &mut mapper,
             &mut frame_allocator
@@ -283,6 +284,8 @@ pub fn _kernel_init(boot_info: &'static mut BootInfo) -> ! {
         kprintln!();
         log_info!("System initialization complete!");
         kprintln!();
+
+        let mut executor = executor::Executor::new();
 
         k_main::_kernel_main();
 

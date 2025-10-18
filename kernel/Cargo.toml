@@ -12,6 +12,20 @@ raw-cpuid = "11.6.0"
 acpi = "6.0.1"
 linked_list_allocator = "0.10.5"
 
+[dependencies.crossbeam-queue]
+version = "0.3.12"
+default-features = false
+features = ["alloc"]
+
+[dependencies.conquer-once]
+version = "0.4.0"
+default-features = false
+
+[dependencies.futures-util]
+version = "0.3.31"
+default-features = false
+features = ["alloc"]
+
 #[package.metadata.bootloader]
 #map-physical-memory = true
 #physical-memory-offset = "0xFFFF800000000000"

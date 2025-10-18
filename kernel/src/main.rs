@@ -15,8 +15,8 @@ use x86_64::{
     VirtAddr,
 };
 
-mod hal;
-mod klibc;
+pub mod hal;
+pub mod klibc;
 pub mod arch;
 pub mod mm;
 pub mod tty;
@@ -44,10 +44,10 @@ fn panic(info: &PanicInfo) -> ! {
     kprintln!();
     log_fatal!("{}", info);
     kprintln!();
-    log_fatal!("  CR0: 0x{:016x}", cpu::cpu_r_cr0());
-    log_fatal!("  CR2: 0x{:016x}", cpu::cpu_r_cr2());
-    log_fatal!("  CR3: 0x{:016x}", cpu::cpu_r_cr3());
-    log_fatal!("  CR4: 0x{:016x}", cpu::cpu_r_cr4());
+    log_fatal!("CR0: 0x{:016x}", cpu::cpu_r_cr0());
+    log_fatal!("CR2: 0x{:016x}", cpu::cpu_r_cr2());
+    log_fatal!("CR3: 0x{:016x}", cpu::cpu_r_cr3());
+    log_fatal!("CR4: 0x{:016x}", cpu::cpu_r_cr4());
 
     loop {
         cpu::cpu_halt();
