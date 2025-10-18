@@ -128,6 +128,28 @@ impl TTYState {
             return;
         }
 
+        if c == '\x08' {
+            if self.cursor_x >= CHAR_WIDTH {
+                self.cursor_x -= CHAR_WIDTH;
+
+                for y in 0..CHAR_HEIGHT {
+                    for x in 0..CHAR_WIDTH {
+                        self.draw_pixel(self.cursor_x + x, self.cursor_y + y, 0x000000);
+                    }
+                }
+            } else if self.cursor_y >= CHAR_HEIGHT {
+                self.cursor_y -= CHAR_HEIGHT;
+                self.cursor_x = (self.info.width / CHAR_WIDTH - 1) * CHAR_WIDTH;
+
+                for y in 0..CHAR_HEIGHT {
+                    for x in 0..CHAR_WIDTH {
+                        self.draw_pixel(self.cursor_x + x, self.cursor_y + y, 0x000000);
+                    }
+                }
+            }
+            return;
+        }
+
         if c == '\n' {
             self.cursor_x = 0;
             self.cursor_y += CHAR_HEIGHT;
@@ -160,6 +182,9 @@ impl TTYState {
             for x in 0..8 {
                 if (row >> (7 - x)) & 1 == 1 {
                     self.draw_pixel(cursor_x + x, cursor_y + y, color);
+                } else {
+                    // 同時清除背景
+                    self.draw_pixel(cursor_x + x, cursor_y + y, 0x000000);
                 }
             }
         }

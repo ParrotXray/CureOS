@@ -18,7 +18,7 @@ pub fn _print(args: fmt::Arguments) {
 }
 
 #[macro_export]
-macro_rules! print {
+macro_rules! kprint {
     ($($arg:tt)*) => ($crate::klibc::print::_print(format_args!($($arg)*)));
 }
 

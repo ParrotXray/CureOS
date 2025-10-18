@@ -14,25 +14,25 @@ lazy_static! {
     static ref TSS: TaskStateSegment = {
         let mut tss = TaskStateSegment::new();
 
-        unsafe { tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
-            const STACK_SIZE: usize = 4096 * 5;  // 20KB
-            static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+        // Double Fault Stack
+        unsafe {
+            tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
+                const STACK_SIZE: usize = 4096 * 5;
+                static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+                let stack_start = VirtAddr::new(&raw const STACK as u64);
+                stack_start + STACK_SIZE as u64
+            };
+        }
 
-            let stack_start = VirtAddr::new(&raw const STACK as *const _ as u64);
-            let stack_end = stack_start + STACK_SIZE as u64;
-
-            stack_end
-        }; }
-
-        unsafe { tss.privilege_stack_table[0] = {
-            const STACK_SIZE: usize = 4096 * 5;  // 20KB
-            static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
-
-            let stack_start = VirtAddr::new(&raw const STACK as *const _ as u64);
-            let stack_end = stack_start + STACK_SIZE as u64;
-
-            stack_end
-        }; }
+        // Privilege Stack
+        unsafe {
+            tss.privilege_stack_table[0] = {
+                const STACK_SIZE: usize = 4096 * 5;
+                static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+                let stack_start = VirtAddr::new(&raw const STACK as u64);
+                stack_start + STACK_SIZE as u64
+            };
+        }
 
         tss
     };
@@ -42,21 +42,21 @@ lazy_static! {
     static ref GDT: (GlobalDescriptorTable, Selectors) = {
         let mut gdt = GlobalDescriptorTable::new();
 
-        // 0x00: Null
+        // 0x00: Null Descriptor (必須)
 
-        // 0x08 ring 0
+        // 0x08: Kernel Code (ring 0, executable)
         let kernel_code_selector = gdt.append(Descriptor::kernel_code_segment());
 
-        // 0x10 ring 0
+        // 0x10: Kernel Data (ring 0, writable)
         let kernel_data_selector = gdt.append(Descriptor::kernel_data_segment());
 
-        // 0x18 ring 3
-        let user_code_selector = gdt.append(Descriptor::user_code_segment());
-
-        // 0x20 ring 3
+        // 0x18: User Data (ring 3, writable) - 注意順序
         let user_data_selector = gdt.append(Descriptor::user_data_segment());
 
-        // 0x28 Task seg
+        // 0x20: User Code (ring 3, executable)
+        let user_code_selector = gdt.append(Descriptor::user_code_segment());
+
+        // 0x28: TSS (佔用 2 個條目)
         let tss_selector = gdt.append(Descriptor::tss_segment(&TSS));
 
         (
@@ -101,11 +101,10 @@ pub fn kernel_data_selector() -> SegmentSelector {
     GDT.1.kernel_data_selector
 }
 
-// 初始化 GDT
+// initialization GDT
 pub fn init() {
+
     GDT.0.load();
-    let gdt_addr = &GDT.0 as *const _ as u64;
-    log_debug!("GDT address: {:#018x}", gdt_addr);
 
     unsafe {
         CS::set_reg(GDT.1.kernel_code_selector);
@@ -114,9 +113,11 @@ pub fn init() {
         ES::set_reg(GDT.1.kernel_data_selector);
         SS::set_reg(GDT.1.kernel_data_selector);
 
-        // 加載 TSS
         load_tss(GDT.1.tss_selector);
     }
+
+    log_debug!("GDT loaded at {:#018x}", &GDT.0 as *const _ as u64);
+    log_debug!("TSS loaded, selector: {:#x}", GDT.1.tss_selector.0);
 }
 
 pub fn print_info() {

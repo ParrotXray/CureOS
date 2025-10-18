@@ -1,4 +1,7 @@
 pub mod io;
 pub mod cpu;
 pub mod acpi;
-mod rtc;
+pub mod rtc;
+pub mod timer;
+pub mod power;
+pub mod apic;
