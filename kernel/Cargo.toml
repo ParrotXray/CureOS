@@ -7,6 +7,7 @@ edition = "2021"
 bootloader_api = "0.11.12"
 lazy_static = { version = "1.5.0", features = ["spin_no_std"] }
 x86_64 = { version = "0.15.2", features = ["instructions"] }
+corosensei = { version = "0.3.1", default-features = false }
 spin = "0.10.0"
 raw-cpuid = "11.6.0"
 acpi = "6.0.1"
