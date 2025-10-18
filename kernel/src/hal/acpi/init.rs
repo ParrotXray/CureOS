@@ -1,22 +1,19 @@
-use acpi::{aml, sdt, AcpiTables, Handle, Handler, PciAddress, PhysicalMapping};
-use acpi::platform::{AcpiPlatform, interrupt::InterruptModel, PciConfigRegions};
-use acpi::sdt::hpet::HpetInfo;
-use acpi::rsdp::Rsdp;
-use core::ptr::NonNull;
-use core::mem;
-use crate::kprintln;
-use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
+use super::power::{extract_power_info, store_power_info};
+use super::{AcpiInfo, CureAcpiHandler};
 use crate::hal::{cpu, io};
-use super::*;
-
+use crate::kprintln;
+use crate::{log_debug, log_error, log_fatal, log_info, log_trace, log_warn};
+use acpi::platform::{interrupt::InterruptModel, AcpiPlatform, PciConfigRegions};
+use acpi::rsdp::Rsdp;
+use acpi::sdt::hpet::HpetInfo;
+use acpi::{aml, sdt, AcpiTables, Handle, Handler, PciAddress, PhysicalMapping};
+use core::{mem, ptr::NonNull};
 
 pub fn init(rsdp_addr: u64, physical_memory_offset: u64) -> Option<AcpiInfo> {
-
     let handler = CureAcpiHandler::new(physical_memory_offset);
 
-    let rsdp_mapping = unsafe {
-        handler.map_physical_region::<Rsdp>(rsdp_addr as usize, mem::size_of::<Rsdp>())
-    };
+    let rsdp_mapping =
+        unsafe { handler.map_physical_region::<Rsdp>(rsdp_addr as usize, size_of::<Rsdp>()) };
     let revision = rsdp_mapping.revision();
     log_info!("ACPI Revision: {}", revision);
 
@@ -62,8 +59,13 @@ pub fn init(rsdp_addr: u64, physical_memory_offset: u64) -> Option<AcpiInfo> {
             let mut io_apics = alloc::vec::Vec::new();
 
             for (i, io_apic) in apic.io_apics.iter().enumerate() {
-                log_info!("IO APIC {}: ID={}, Address={:#x}, GSI Base={}",
-                    i, io_apic.id, io_apic.address, io_apic.global_system_interrupt_base);
+                log_info!(
+                    "IO APIC {}: ID={}, Address={:#x}, GSI Base={}",
+                    i,
+                    io_apic.id,
+                    io_apic.address,
+                    io_apic.global_system_interrupt_base
+                );
 
                 io_apics.push((
                     io_apic.address as u64,
@@ -89,7 +91,10 @@ pub fn init(rsdp_addr: u64, physical_memory_offset: u64) -> Option<AcpiInfo> {
             log_info!("Base Address: {:#x}", hpet.base_address);
             log_info!("Hardware Rev: {}", hpet.hardware_rev);
             log_info!("Comparator Count: {}", hpet.num_comparators);
-            log_info!("Counter Size: {} bit", if hpet.main_counter_is_64bits { 64 } else { 32 });
+            log_info!(
+                "Counter Size: {} bit",
+                if hpet.main_counter_is_64bits { 64 } else { 32 }
+            );
             log_info!("Legacy IRQ Capable: {}", hpet.legacy_irq_capable);
             log_info!("PCI Vendor ID: {:#x}", hpet.pci_vendor_id);
             true
@@ -114,13 +119,12 @@ pub fn init(rsdp_addr: u64, physical_memory_offset: u64) -> Option<AcpiInfo> {
     }
 
     kprintln!();
-    log_info!("Extracting ACPI power management info...");
-    // if let Some(power_info) = extract_power_info(&platform.tables) {
-    //     store_power_info(power_info);
-    // } else {
-    //     log_warn!("Could not extract ACPI power info, shutdown may not work");
-    // }
-
+    log_info!("Extracting power management information...");
+    if let Some(power_info) = extract_power_info(&platform.tables, &handler) {
+        store_power_info(power_info);
+    } else {
+        log_warn!("Could not extract ACPI power info");
+    }
 
     log_info!("ACPI initialized successfully!");
 
@@ -142,7 +146,20 @@ pub fn print_info(info: &AcpiInfo) {
     if let Some(boot_proc) = info.boot_processor {
         log_info!("Boot Processor: UID {}", boot_proc);
     }
-    log_info!("APIC: {}", if info.has_apic { "Available " } else { "Not available" });
-    log_info!("HPET: {}", if info.has_hpet { "Available " } else { "Not available" });
+    log_info!(
+        "APIC: {}",
+        if info.has_apic {
+            "Available "
+        } else {
+            "Not available"
+        }
+    );
+    log_info!(
+        "HPET: {}",
+        if info.has_hpet {
+            "Available "
+        } else {
+            "Not available"
+        }
+    );
 }
-

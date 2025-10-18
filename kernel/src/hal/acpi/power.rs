@@ -1,15 +1,18 @@
-use acpi::{aml, sdt, AcpiTables, Handle, Handler, PciAddress, PhysicalMapping};
-use acpi::platform::{AcpiPlatform, interrupt::InterruptModel, PciConfigRegions};
-use core::mem;
-use crate::kprintln;
-use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
+use super::{AcpiPowerInfo, CureAcpiHandler, ACPI_POWER_INFO};
 use crate::hal::{cpu, io};
+use crate::kprintln;
 use crate::mm::vma;
-use super::*;
-
+use crate::{log_debug, log_error, log_fatal, log_info, log_trace, log_warn};
+use acpi::platform::{interrupt::InterruptModel, AcpiPlatform, PciConfigRegions};
+use acpi::sdt::{SdtHeader, Signature};
+use acpi::{aml, sdt, AcpiTables, Handle, Handler, PciAddress, PhysicalMapping};
+use core::mem;
 
 /// Extract shutdown information from ACPI table
-pub fn extract_power_info(tables: &AcpiTables<CureAcpiHandler>) -> Option<AcpiPowerInfo> {
+pub fn extract_power_info(
+    tables: &AcpiTables<CureAcpiHandler>,
+    handler: &CureAcpiHandler,
+) -> Option<AcpiPowerInfo> {
     log_info!("Extracting ACPI power management info...");
 
     let fadt = match tables.find_table::<sdt::fadt::Fadt>() {
@@ -20,18 +23,12 @@ pub fn extract_power_info(tables: &AcpiTables<CureAcpiHandler>) -> Option<AcpiPo
         }
     };
 
-    log_debug!("FADT found");
-
-    // Get the control block address and DSDT address from FADT
     unsafe {
-        // Get the raw pointer of FADT to read the fields manually
         let fadt_ptr = (&*fadt as *const sdt::fadt::Fadt) as *const u8;
 
-        // FADT structure offset
         let pm1a_control_block = core::ptr::read_unaligned(fadt_ptr.add(64) as *const u32);
         let pm1b_control_block = core::ptr::read_unaligned(fadt_ptr.add(68) as *const u32);
 
-        // Read DSDT address
         let fadt_revision = core::ptr::read_unaligned(fadt_ptr.add(8) as *const u8);
         let dsdt_address = if fadt_revision >= 2 {
             let x_dsdt = core::ptr::read_unaligned(fadt_ptr.add(140) as *const u64);
@@ -50,8 +47,7 @@ pub fn extract_power_info(tables: &AcpiTables<CureAcpiHandler>) -> Option<AcpiPo
         }
         log_debug!("DSDT address: {:#x}", dsdt_address);
 
-        // Parse the _S5 object
-        let (slp_typa, slp_typb) = match parse_s5_object(dsdt_address) {
+        let (slp_typa, slp_typb) = match parse_s5_object(dsdt_address, handler) {
             Some(values) => values,
             None => {
                 log_warn!("Could not parse _S5 object, using default values");
@@ -82,88 +78,124 @@ pub fn extract_power_info(tables: &AcpiTables<CureAcpiHandler>) -> Option<AcpiPo
 /// ...
 /// })
 /// ```
-fn parse_s5_object(dsdt_phys_addr: u64) -> Option<(u16, u16)> {
-    let dsdt_virt_addr = vma::phys_to_virt(dsdt_phys_addr);
+fn parse_s5_object(dsdt_phys_addr: u64, handler: &CureAcpiHandler) -> Option<(u16, u16)> {
+    log_debug!("Parsing DSDT at physical address {:#x}", dsdt_phys_addr);
+
+    // Map the DSDT header first to get the length
+    let dsdt_header_mapping = unsafe {
+        handler.map_physical_region::<SdtHeader>(
+            dsdt_phys_addr as usize,
+            size_of::<SdtHeader>(),
+        )
+    };
+
+    if dsdt_header_mapping.signature != Signature::DSDT {
+        log_error!("Invalid DSDT signature");
+        return None;
+    }
+
+    let dsdt_length = dsdt_header_mapping.length as usize;
+    log_debug!("DSDT length: {} bytes", dsdt_length);
+
+    // Release the header mapping
+    drop(dsdt_header_mapping);
+
+    // 映射完整的 DSDT
+    let dsdt_mapping =
+        unsafe { handler.map_physical_region::<u8>(dsdt_phys_addr as usize, dsdt_length) };
 
     unsafe {
-        let dsdt_ptr = dsdt_virt_addr.as_ptr::<u8>();
+        let dsdt_ptr = dsdt_mapping.virtual_start.as_ptr();
+        let dsdt_data = core::slice::from_raw_parts(dsdt_ptr, dsdt_length);
 
-        // DSDT header
-        let signature = core::slice::from_raw_parts(dsdt_ptr, 4);
-        if signature != b"DSDT" {
-            log_error!("Invalid DSDT signature");
-            return None;
-        }
-
-        // Get DSDT length
-        let length = core::ptr::read_unaligned(dsdt_ptr.add(4) as *const u32);
-        log_debug!("DSDT length: {} bytes", length);
-
-        // Search for the "_S5_" string in DSDT
-        let dsdt_data = core::slice::from_raw_parts(dsdt_ptr, length as usize);
-
-        // Byte representation of "_S5_" in AML
+        // 在 DSDT 中搜索 "_S5_"
         let s5_name = b"_S5_";
 
         for i in 0..(dsdt_data.len() - 4) {
-            if &dsdt_data[i..i+4] == s5_name {
+            if &dsdt_data[i..i + 4] == s5_name {
                 log_debug!("Found _S5 at offset {:#x}", i);
 
-                // Parse the _S5 package
-                // Typical AML bytecode:
-                // Name(_S5, Package() {...})
-                // Or: 08 5F 53 35 5F 12 [pkg_length] [num_elements] ...
+                let debug_range = i..core::cmp::min(i + 32, dsdt_data.len());
+                log_debug!("_S5 region bytes: {:02x?}", &dsdt_data[debug_range]);
 
-                let mut offset = i + 4;
+                let mut offset = i + 4; // Skip "_S5_"
 
-                // Skip possible NameOp (0x08)
-                if offset < dsdt_data.len() && dsdt_data[offset] == 0x08 {
-                    offset += 1;
-                }
-
-                // Find PackageOp (0x12)
-                while offset < dsdt_data.len() && dsdt_data[offset] != 0x12 {
-                    offset += 1;
-                    if offset - i > 16 {
+                // Skip any intermediate bytes and go straight to PackageOp
+                let search_limit = offset + 8;
+                while offset < search_limit && offset < dsdt_data.len() {
+                    if dsdt_data[offset] == 0x12 {
+                        log_debug!("Found PackageOp at offset {:#x}", offset);
                         break;
                     }
+                    offset += 1;
                 }
 
-                if offset >= dsdt_data.len() {
+                if offset >= dsdt_data.len() || dsdt_data[offset] != 0x12 {
                     log_warn!("PackageOp not found after _S5");
                     continue;
                 }
 
-                offset += 1; // 跳過 PackageOp
+                offset += 1; // Skip PackageOp (0x12)
+
+                log_debug!("Found _S5 at offset {:#x}", i);
+                log_debug!("Found _S5 at offset {:#x}", i);
 
                 // Parse PkgLength
                 let pkg_length = parse_pkg_length(&dsdt_data[offset..]);
-                offset += get_pkg_length_size(&dsdt_data[offset..]);
+                let pkg_length_size = get_pkg_length_size(&dsdt_data[offset..]);
+                log_debug!("PkgLength: {}, size: {}", pkg_length, pkg_length_size);
+                offset += pkg_length_size;
 
                 // NumElements
+                if offset >= dsdt_data.len() {
+                    log_warn!("Unexpected end of data");
+                    continue;
+                }
                 let num_elements = dsdt_data[offset];
                 offset += 1;
 
-                log_debug!("Package length: {}, elements: {}", pkg_length, num_elements);
+                log_debug!("Package elements: {}", num_elements);
 
                 if num_elements < 2 {
                     log_warn!("_S5 package has less than 2 elements");
                     continue;
                 }
 
+                log_debug!(
+                    "Current offset: {:#x}, next bytes: {:02x?}",
+                    offset,
+                    &dsdt_data[offset..core::cmp::min(offset + 8, dsdt_data.len())]
+                );
+
                 // Extract SLP_TYPa
+                log_debug!(
+                    "Reading SLP_TYPa at offset {:#x}, byte: {:#x}",
+                    offset,
+                    dsdt_data[offset]
+                );
                 let slp_typa = parse_aml_integer(&dsdt_data[offset..]).unwrap_or(0);
-                offset += get_aml_integer_size(&dsdt_data[offset..]);
+                log_debug!("SLP_TYPa parsed: {:#x}", slp_typa);
+                let typa_size = get_aml_integer_size(&dsdt_data[offset..]);
+                offset += typa_size;
 
                 // Extract SLP_TYPb
+                log_debug!(
+                    "Reading SLP_TYPb at offset {:#x}, byte: {:#x}",
+                    offset,
+                    dsdt_data[offset]
+                );
                 let slp_typb = parse_aml_integer(&dsdt_data[offset..]).unwrap_or(0);
+                log_debug!("SLP_TYPb parsed: {:#x}", slp_typb);
 
-                log_info!("Parsed _S5: SLP_TYPa={:#x}, SLP_TYPb={:#x}", slp_typa, slp_typb);
+                log_info!(
+                    "Parsed _S5: SLP_TYPa={:#x}, SLP_TYPb={:#x}",
+                    slp_typa,
+                    slp_typb
+                );
 
                 return Some((slp_typa as u16, slp_typb as u16));
             }
         }
-
         log_error!("_S5 object not found in DSDT");
         None
     }
@@ -181,17 +213,21 @@ fn parse_pkg_length(data: &[u8]) -> usize {
     match byte_count {
         0 => (lead_byte & 0x3F) as usize,
         1 => {
-            if data.len() < 2 { return 0; }
+            if data.len() < 2 {
+                return 0;
+            }
             ((lead_byte & 0x0F) as usize) | ((data[1] as usize) << 4)
         }
         2 => {
-            if data.len() < 3 { return 0; }
-            ((lead_byte & 0x0F) as usize)
-                | ((data[1] as usize) << 4)
-                | ((data[2] as usize) << 12)
+            if data.len() < 3 {
+                return 0;
+            }
+            ((lead_byte & 0x0F) as usize) | ((data[1] as usize) << 4) | ((data[2] as usize) << 12)
         }
         3 => {
-            if data.len() < 4 { return 0; }
+            if data.len() < 4 {
+                return 0;
+            }
             ((lead_byte & 0x0F) as usize)
                 | ((data[1] as usize) << 4)
                 | ((data[2] as usize) << 12)
@@ -221,23 +257,34 @@ fn parse_aml_integer(data: &[u8]) -> Option<u64> {
     match data[0] {
         0x00 => Some(0), // ZeroOp
         0x01 => Some(1), // OneOp
-        0x0A => {        // BytePrefix
-            if data.len() < 2 { return None; }
+        0x0A => {
+            // BytePrefix
+            if data.len() < 2 {
+                return None;
+            }
             Some(data[1] as u64)
         }
-        0x0B => {        // WordPrefix
-            if data.len() < 3 { return None; }
+        0x0B => {
+            // WordPrefix
+            if data.len() < 3 {
+                return None;
+            }
             Some(u16::from_le_bytes([data[1], data[2]]) as u64)
         }
-        0x0C => {        // DWordPrefix
-            if data.len() < 5 { return None; }
+        0x0C => {
+            // DWordPrefix
+            if data.len() < 5 {
+                return None;
+            }
             Some(u32::from_le_bytes([data[1], data[2], data[3], data[4]]) as u64)
         }
-        0x0E => {        // QWordPrefix
-            if data.len() < 9 { return None; }
+        0x0E => {
+            // QWordPrefix
+            if data.len() < 9 {
+                return None;
+            }
             Some(u64::from_le_bytes([
-                data[1], data[2], data[3], data[4],
-                data[5], data[6], data[7], data[8],
+                data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8],
             ]))
         }
         _ => None,
@@ -277,8 +324,11 @@ pub fn acpi_shutdown() -> ! {
     unsafe {
         let slp_cmd_a = (power_info.slp_typa << 10) | power_info.slp_en;
 
-        log_info!("Writing {:#x} to PM1a_CNT ({:#x})",
-            slp_cmd_a, power_info.pm1a_control_block);
+        log_info!(
+            "Writing {:#x} to PM1a_CNT ({:#x})",
+            slp_cmd_a,
+            power_info.pm1a_control_block
+        );
 
         // Write to PM1a control register
         io::io_port_ww(power_info.pm1a_control_block as u16, slp_cmd_a);
@@ -286,8 +336,11 @@ pub fn acpi_shutdown() -> ! {
         // If PM1b exists, also write
         if power_info.pm1b_control_block != 0 {
             let slp_cmd_b = (power_info.slp_typb << 10) | power_info.slp_en;
-            log_info!("Writing {:#x} to PM1b_CNT ({:#x})",
-                slp_cmd_b, power_info.pm1b_control_block);
+            log_info!(
+                "Writing {:#x} to PM1b_CNT ({:#x})",
+                slp_cmd_b,
+                power_info.pm1b_control_block
+            );
             io::io_port_ww(power_info.pm1b_control_block as u16, slp_cmd_b);
         }
 

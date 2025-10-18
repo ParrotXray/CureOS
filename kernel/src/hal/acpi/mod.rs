@@ -1,14 +1,9 @@
-pub mod power;
 pub mod init;
+pub mod power;
 
-use acpi::{aml, sdt, AcpiTables, Handle, Handler, PciAddress, PhysicalMapping};
-use acpi::sdt::hpet::HpetInfo;
-use core::ptr::NonNull;
-use core::mem;
-use crate::kprintln;
-use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
 use crate::hal::{cpu, io};
-
+use acpi::{aml, Handle, Handler, PciAddress, PhysicalMapping};
+use core::ptr::NonNull;
 
 #[derive(Clone, Copy)]
 pub struct CureAcpiHandler {
@@ -25,7 +20,7 @@ pub struct AcpiInfo {
     pub io_apics: alloc::vec::Vec<(u64, u8, u32)>, // (address, id, gsi_base)
 }
 
-/// ACPI 關機所需的信息
+/// Information required for ACPI shutdown
 pub struct AcpiPowerInfo {
     pub pm1a_control_block: u32,
     pub pm1b_control_block: u32,
@@ -184,7 +179,6 @@ impl Handler for CureAcpiHandler {
         // TODO: 實作微秒級延遲
         // 簡單的忙等待實作
         cpu::cpu_pause(_microseconds * 1000);
-
     }
 
     fn sleep(&self, _milliseconds: u64) {
