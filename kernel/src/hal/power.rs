@@ -71,18 +71,18 @@ fn try_shutdown(method: ShutdownMethod) {
             }
 
             ShutdownMethod::QemuExit => {
-                // QEMU isa-debug-exit 設備
+                // QEMU isa-debug-exit device
                 io::io_port_ww(0x604, 0x2000);
                 io::io_port_rl(0x501);
             }
 
             ShutdownMethod::BochsExit => {
-                // Bochs 專用關機端口
+                // Bochs dedicated shutdown port
                 io::io_port_ww(0xB004, 0x2000);
             }
 
             ShutdownMethod::VirtualBox => {
-                // VirtualBox 關機端口
+                // VirtualBox shutdown port
                 io::io_port_ww(0x4004, 0x3400);
             }
 
@@ -100,7 +100,7 @@ fn try_shutdown(method: ShutdownMethod) {
     }
 }
 
-/// 重啟系統
+/// Restart the system
 pub fn reboot() -> ! {
     log_info!("Rebooting system...");
 
@@ -119,10 +119,10 @@ pub fn reboot() -> ! {
     ];
 
     for method in methods.iter() {
-        log_debug!("Trying shutdown method: {:?}", method);
+        log_debug!("Trying reboot method: {:?}", method);
         try_reboot(*method);
 
-        log_warn!("{:?} shutdown failed", method);
+        log_warn!("{:?} reboot failed", method);
         cpu::cpu_pause(1000);
     }
 
@@ -137,42 +137,30 @@ pub fn reboot() -> ! {
 fn try_reboot(method: RebootMethod) {
     match method {
         RebootMethod::BootACPI => {
-            acpi_reboot()
+            acpi::power::acpi_reset_reg_reboot();
         }
 
         RebootMethod::BootKBD => {
-            keyboard_controller_reboot()
+            keyboard_controller_reboot();
         }
 
         RebootMethod::BootCF9 => {
-            pci_reboot()
+            pci_reboot();
         }
         RebootMethod::BootEFI => {
-            efi_reboot()
+            efi_reboot();
         }
 
         RebootMethod::Boot92h => {
-            cpu_reset()
+            cpu_reset();
         }
     }
 
     cpu::cpu_pause(10000);
 }
 
-fn acpi_reboot() {
-    log_debug!("Trying ACPI reboot...");
-
-    unsafe {
-        // ACPI FADT 的 RESET_REG
-        // 需要從 ACPI 表中讀取實際地址
-        // 這裡使用常見的地址作為示例
-        io::io_port_wb(0xCF9, 0x06);
-        cpu::cpu_pause(10000);
-    }
-}
-
-fn keyboard_controller_reboot() {
-    log_debug!("Trying keyboard controller reboot...");
+fn keyboard_controller_reboot() -> bool {
+    log_debug!("keyboard controller reboot...");
 
     unsafe {
         for _ in 0..1000 {
@@ -186,10 +174,12 @@ fn keyboard_controller_reboot() {
 
         cpu::cpu_pause(100000);
     }
+
+    false
 }
 
-fn pci_reboot() {
-    log_debug!("Trying PCI reboot...");
+fn pci_reboot() -> bool {
+    log_debug!("PCI reboot...");
 
     unsafe {
         let mut val = io::io_port_rb(0xCF9) & !0x06;
@@ -199,24 +189,29 @@ fn pci_reboot() {
 
         cpu::cpu_pause(100000);
     }
+
+    false
 }
 
 
-fn efi_reboot() {
+fn efi_reboot() -> bool {
     log_debug!("Trying EFI runtime services reboot...");
 
     // TODO: 實現 EFI ResetSystem 調用
+    false
 }
 
-fn cpu_reset() {
-    log_debug!("Trying CPU reset via port 92h...");
+fn cpu_reset() -> bool {
+    log_debug!("CPU reset via port 92h...");
 
     unsafe {
         let mut val = io::io_port_rb(0x92);
-        val &= !0x01; // 清除快速 A20 位
-        val |= 0x01;  // 設置重置位
+        val &= !0x01; // Clear Fast A20 Bit
+        val |= 0x01;  // Set the reset bit
         io::io_port_wb(0x92, val);
 
         cpu::cpu_pause(100000);
     }
+
+    false
 }

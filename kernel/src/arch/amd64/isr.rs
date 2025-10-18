@@ -3,9 +3,10 @@ use x86_64::instructions::port::Port;
 use x86_64::structures::idt::{InterruptStackFrame, PageFaultErrorCode};
 use x86_64::VirtAddr;
 use crate::{drivers, kprintln};
-use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
+use crate::{log_debug, log_error, log_fatal, log_info, log_trace, log_warn};
 use super::gdt;
-use crate::hal::{timer, cpu, lapic, rtc};
+use crate::hal::{cpu, rtc, timer};
+use crate::hal::apic::lapic;
 use crate::mm::paging;
 
 /// Divide Error (#DE)

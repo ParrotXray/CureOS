@@ -1,8 +1,9 @@
 // kernel/src/hal/timer
 
-use crate::hal::{lapic, rtc, cpu, ioapic};
-use core::sync::atomic::{AtomicU64, AtomicBool, Ordering};
-use crate::{log_info, log_debug, log_warn, log_error};
+use crate::hal::{cpu, rtc};
+use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use crate::{log_debug, log_error, log_info, log_warn};
+use crate::hal::apic::{ioapic, lapic};
 
 const APIC_CALIBRATION_CONST: u32 = 0x100000;
 const RTC_BASE_FREQUENCY: u32 = 1024;

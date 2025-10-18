@@ -1,4 +1,4 @@
-use super::power::{extract_power_info, store_power_info};
+use super::power::{extract_power_info, extract_reset_reg, store_power_info, store_reset_reg};
 use super::{AcpiInfo, CureAcpiHandler};
 use crate::hal::{cpu, io};
 use crate::kprintln;
@@ -124,6 +124,14 @@ pub fn init(rsdp_addr: u64, physical_memory_offset: u64) -> Option<AcpiInfo> {
         store_power_info(power_info);
     } else {
         log_warn!("Could not extract ACPI power info");
+    }
+
+    kprintln!();
+    log_info!("Extracting reset register information...");
+    if let Some(reset_reg) = extract_reset_reg(&platform.tables) {
+        store_reset_reg(reset_reg);
+    } else {
+        log_warn!("Could not extract ACPI reset register");
     }
 
     log_info!("ACPI initialized successfully!");

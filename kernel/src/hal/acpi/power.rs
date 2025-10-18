@@ -1,4 +1,4 @@
-use super::{AcpiPowerInfo, CureAcpiHandler, ACPI_POWER_INFO};
+use super::{AcpiPowerInfo, CureAcpiHandler, ResetRegister, ACPI_POWER_INFO, ACPI_RESET_REG};
 use crate::hal::{cpu, io};
 use crate::kprintln;
 use crate::mm::vma;
@@ -83,10 +83,7 @@ fn parse_s5_object(dsdt_phys_addr: u64, handler: &CureAcpiHandler) -> Option<(u1
 
     // Map the DSDT header first to get the length
     let dsdt_header_mapping = unsafe {
-        handler.map_physical_region::<SdtHeader>(
-            dsdt_phys_addr as usize,
-            size_of::<SdtHeader>(),
-        )
+        handler.map_physical_region::<SdtHeader>(dsdt_phys_addr as usize, size_of::<SdtHeader>())
     };
 
     if dsdt_header_mapping.signature != Signature::DSDT {
@@ -108,7 +105,7 @@ fn parse_s5_object(dsdt_phys_addr: u64, handler: &CureAcpiHandler) -> Option<(u1
         let dsdt_ptr = dsdt_mapping.virtual_start.as_ptr();
         let dsdt_data = core::slice::from_raw_parts(dsdt_ptr, dsdt_length);
 
-        // 在 DSDT 中搜索 "_S5_"
+        // Search DSDT for "_S5_"
         let s5_name = b"_S5_";
 
         for i in 0..(dsdt_data.len() - 4) {
@@ -121,7 +118,7 @@ fn parse_s5_object(dsdt_phys_addr: u64, handler: &CureAcpiHandler) -> Option<(u1
                 let mut offset = i + 4; // Skip "_S5_"
 
                 // Skip any intermediate bytes and go straight to PackageOp
-                let search_limit = offset + 8;
+                let search_limit = offset + 16;
                 while offset < search_limit && offset < dsdt_data.len() {
                     if dsdt_data[offset] == 0x12 {
                         log_debug!("Found PackageOp at offset {:#x}", offset);
@@ -248,15 +245,16 @@ fn get_pkg_length_size(data: &[u8]) -> usize {
     1 + byte_count
 }
 
-/// 解析 AML 整數
+/// Parse AML integer
 fn parse_aml_integer(data: &[u8]) -> Option<u64> {
     if data.is_empty() {
         return None;
     }
 
     match data[0] {
-        0x00 => Some(0), // ZeroOp
-        0x01 => Some(1), // OneOp
+        0x00 => Some(0),          // ZeroOp
+        0x01 => Some(1),          // OneOp
+        0xFF => Some(0xFFFFFFFF), // OnesOp
         0x0A => {
             // BytePrefix
             if data.len() < 2 {
@@ -287,7 +285,10 @@ fn parse_aml_integer(data: &[u8]) -> Option<u64> {
                 data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8],
             ]))
         }
-        _ => None,
+        _ => {
+            log_warn!("Unknown AML integer prefix: {:#02x}", data[0]);
+            None
+        }
     }
 }
 
@@ -298,17 +299,17 @@ fn get_aml_integer_size(data: &[u8]) -> usize {
     }
 
     match data[0] {
-        0x00 | 0x01 => 1,
-        0x0A => 2,
-        0x0B => 3,
-        0x0C => 5,
-        0x0E => 9,
+        0x00 | 0x01 | 0xFF => 1, // Zero, One, Ones
+        0x0A => 2,               // Byte
+        0x0B => 3,               // Word
+        0x0C => 5,               // DWord
+        0x0E => 9,               // QWord
         _ => 1,
     }
 }
 
 /// Perform ACPI shutdown
-pub fn acpi_shutdown() -> ! {
+pub fn acpi_shutdown() -> bool {
     log_info!("Attempting ACPI shutdown...");
 
     let power_info = unsafe {
@@ -316,7 +317,7 @@ pub fn acpi_shutdown() -> ! {
             Some(info) => info,
             None => {
                 log_error!("ACPI power info not initialized!");
-                return fallback_shutdown();
+                return false;
             }
         }
     };
@@ -344,40 +345,11 @@ pub fn acpi_shutdown() -> ! {
             io::io_port_ww(power_info.pm1b_control_block as u16, slp_cmd_b);
         }
 
-        // 等待關機
-        for _ in 0..1000000 {
-            cpu::cpu_pause(100);
-        }
+        cpu::cpu_pause(10000);
     }
 
     log_error!("ACPI shutdown failed!");
-    fallback_shutdown()
-}
-
-/// Backup shutdown method
-fn fallback_shutdown() -> ! {
-    log_warn!("Using fallback shutdown methods...");
-
-    unsafe {
-        // QEMU
-        io::io_port_ww(0x604, 0x2000);
-        cpu::cpu_pause(10000);
-
-        // Bochs
-        for &c in b"Shutdown" {
-            io::io_port_wb(0x8900, c);
-        }
-        cpu::cpu_pause(10000);
-
-        // VirtualBox
-        io::io_port_ww(0x4004, 0x3400);
-    }
-
-    log_error!("All shutdown methods failed!");
-
-    loop {
-        cpu::cpu_halt();
-    }
+    false
 }
 
 /// Store ACPI shutdown information
@@ -386,4 +358,182 @@ pub fn store_power_info(info: AcpiPowerInfo) {
         ACPI_POWER_INFO = Some(info);
     }
     log_info!("ACPI power info stored successfully");
+}
+
+/// Extract reset register information from FADT
+pub fn extract_reset_reg(tables: &AcpiTables<CureAcpiHandler>) -> Option<ResetRegister> {
+    log_info!("Extracting ACPI reset register info...");
+
+    let fadt = match tables.find_table::<sdt::fadt::Fadt>() {
+        Some(fadt) => fadt,
+        None => {
+            log_error!("Failed to find FADT");
+            return None;
+        }
+    };
+
+    unsafe {
+        let fadt_ptr = (&*fadt as *const sdt::fadt::Fadt) as *const u8;
+
+        let fadt_revision = core::ptr::read_unaligned(fadt_ptr.add(8) as *const u8);
+
+        if fadt_revision < 2 {
+            log_warn!("FADT revision {} does not support RESET_REG", fadt_revision);
+            return None;
+        }
+
+        // 讀取 Flags (offset 112 in FADT)
+        let flags = core::ptr::read_unaligned(fadt_ptr.add(112) as *const u32);
+        let reset_reg_supported = (flags & (1 << 10)) != 0;
+
+        if !reset_reg_supported {
+            log_warn!("RESET_REG not supported (FADT flags bit 10 not set)");
+            return None;
+        }
+
+        // RESET_REG is at offset 116 in the FADT
+        // Generic Address Structure format:
+        // +0: Address Space ID (1 byte)
+        // +1: Register Bit Width (1 byte)
+        // +2: Register Bit Offset (1 byte)
+        // +3: Access Size (1 byte)
+        // +4: Address (8 bytes)
+
+        let reset_reg_offset = 116;
+
+        let address_space = core::ptr::read_unaligned(fadt_ptr.add(reset_reg_offset) as *const u8);
+        let bit_width = core::ptr::read_unaligned(fadt_ptr.add(reset_reg_offset + 1) as *const u8);
+        let bit_offset = core::ptr::read_unaligned(fadt_ptr.add(reset_reg_offset + 2) as *const u8);
+        let address = core::ptr::read_unaligned(fadt_ptr.add(reset_reg_offset + 4) as *const u64);
+
+        // RESET_VALUE is after RESET_REG (offset 128)
+        let reset_value = core::ptr::read_unaligned(fadt_ptr.add(128) as *const u8);
+
+        if bit_width != 8 || bit_offset != 0 {
+            log_warn!(
+                "Invalid RESET_REG configuration: width={}, offset={}",
+                bit_width,
+                bit_offset
+            );
+            return None;
+        }
+
+        if address_space > 2 {
+            log_warn!("Invalid address space ID: {}", address_space);
+            return None;
+        }
+
+        log_info!("RESET_REG found:");
+        log_info!(
+            "  Address Space: {} ({})",
+            address_space,
+            match address_space {
+                0 => "System Memory",
+                1 => "System I/O",
+                2 => "PCI Config",
+                _ => "Unknown",
+            }
+        );
+        log_info!("Address: {:#x}", address);
+        log_info!("Reset Value: {:#x}", reset_value);
+
+        Some(ResetRegister {
+            address_space,
+            address,
+            value: reset_value,
+        })
+    }
+}
+
+pub fn store_reset_reg(reset_reg: ResetRegister) {
+    unsafe {
+        ACPI_RESET_REG = Some(reset_reg);
+    }
+    log_info!("ACPI reset register info stored");
+}
+
+/// Restart using ACPI RESET_REG
+pub fn acpi_reset_reg_reboot() -> bool {
+    unsafe {
+        let reset_reg = match &ACPI_RESET_REG {
+            Some(reg) => reg,
+            None => {
+                log_debug!("ACPI RESET_REG not available");
+                return false;
+            }
+        };
+
+        log_info!("Using ACPI RESET_REG for reboot");
+        log_info!(
+            "  Space: {}, Address: {:#x}, Value: {:#x}",
+            reset_reg.address_space,
+            reset_reg.address,
+            reset_reg.value
+        );
+
+        match reset_reg.address_space {
+            // System I/O
+            1 => {
+                log_debug!(
+                    "Writing {:#x} to I/O port {:#x}",
+                    reset_reg.value,
+                    reset_reg.address
+                );
+                io::io_port_wb(reset_reg.address as u16, reset_reg.value);
+                true
+            }
+
+            // System Memory
+            0 => {
+                log_debug!(
+                    "Writing {:#x} to memory address {:#x}",
+                    reset_reg.value,
+                    reset_reg.address
+                );
+
+                let virt_addr = vma::phys_to_virt(reset_reg.address);
+                let ptr = virt_addr.as_mut_ptr::<u8>();
+                core::ptr::write_volatile(ptr, reset_reg.value);
+                true
+            }
+
+            // PCI Config Space
+            2 => {
+                log_debug!(
+                    "Writing {:#x} to PCI config space {:#x}",
+                    reset_reg.value,
+                    reset_reg.address
+                );
+
+                // PCI address encoding (ACPI format):
+                // Bits 63-32: Reserved
+                // Bits 31-16: Bus Number
+                // Bits 15-11: Device Number
+                // Bits 10-8: Function Number
+                // Bits 7-0: Register Offset
+
+                let bus = ((reset_reg.address >> 16) & 0xFFFF) as u8;
+                let device = ((reset_reg.address >> 11) & 0x1F) as u8;
+                let function = ((reset_reg.address >> 8) & 0x7) as u8;
+                let offset = (reset_reg.address & 0xFF) as u8;
+
+                log_debug!(
+                    "PCI Bus={}, Dev={}, Func={}, Offset={:#x}",
+                    bus,
+                    device,
+                    function,
+                    offset
+                );
+
+                // TODO: 調用你的 PCI 配置空間寫入函數
+                // pci_config_write_byte(bus, device, function, offset, reset_reg.value);
+                false
+            }
+
+            _ => {
+                log_error!("Unknown address space: {}", reset_reg.address_space);
+                false
+            }
+        }
+    }
 }

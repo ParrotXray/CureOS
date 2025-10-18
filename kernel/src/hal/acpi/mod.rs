@@ -29,6 +29,16 @@ pub struct AcpiPowerInfo {
     pub slp_en: u16,
 }
 
+/// ACPI 重置寄存器信息
+#[derive(Debug, Clone, Copy)]
+pub struct ResetRegister {
+    pub address_space: u8,  // 0=SystemMemory, 1=SystemIO, 2=PciConfig
+    pub address: u64,
+    pub value: u8,
+}
+
+static mut ACPI_RESET_REG: Option<ResetRegister> = None;
+
 static mut ACPI_POWER_INFO: Option<AcpiPowerInfo> = None;
 
 impl CureAcpiHandler {

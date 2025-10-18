@@ -3,7 +3,7 @@ use bootloader_api::BootInfo;
 use bootloader_api::info::MemoryRegionKind;
 use x86_64::structures::paging::OffsetPageTable;
 use x86_64::{PhysAddr, VirtAddr};
-use crate::mm::{allocator::{heap, frame, pmm}, vmm, paging, vma};
+use crate::mm::{allocator::{frame, heap, pmm}, paging, vma, vmm};
 use crate::arch::amd64::{gdt, idt};
 use crate::tty::tty;
 use crate::kprintln;
@@ -12,7 +12,8 @@ use crate::klibc::logger::{init, LogLevel, LoggerConfig};
 use crate::klibc::malloc;
 use crate::{log_debug, log_error, log_info, log_trace, log_warn};
 use crate::drivers::keyboard;
-use crate::hal::{acpi, timer, cpu, ioapic, lapic, rtc};
+use crate::hal::{acpi, cpu, rtc, timer};
+use crate::hal::apic::{ioapic, lapic};
 use crate::hal::cpu::cpu_enable_interrupts;
 
 fn _logger_init() {
@@ -294,5 +295,5 @@ pub fn _kernel_init(boot_info: &'static mut BootInfo) -> ! {
 pub fn kernel_emergency_cleanup() {
     log_error!("Emergency cleanup triggered");
     // 在 panic 前調用，做最後的清理工作
-    // 比如刷新緩衝區、保存日誌等
+    // 刷新緩衝區、保存日誌等
 }
