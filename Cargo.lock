@@ -192,6 +192,7 @@ dependencies = [
  "futures-util",
  "lazy_static",
  "linked_list_allocator",
+ "once_cell",
  "raw-cpuid",
  "spin 0.10.0",
  "x86_64",

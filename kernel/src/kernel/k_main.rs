@@ -4,6 +4,7 @@ use crate::{kprint, kprintln, shell};
 use crate::{log_trace, log_debug, log_info, log_warn, log_error, log_fatal};
 use crate::mm::{vma, vmm};
 use crate::mm::allocator::pmm;
+use crate::process::scheduler::Scheduler;
 
 pub fn _kernel_main() -> ! {
     kprintln!();
@@ -35,11 +36,42 @@ pub fn _kernel_main() -> ! {
     kprintln!("Type 'help' for available commands");
     kprintln!();
 
-    shell::init();
+    Scheduler::init();
 
-    loop {
-        cpu::cpu_halt();
-    }
+    // 創建測試進程 A
+    Scheduler::spawn(|yielder, _input| {
+        for i in 0..5 {
+            crate::kprintln!("Process A: iteration {}", i);
+            yielder.suspend(());
+        }
+        crate::kprintln!("Process A finished");
+    }, 1);
+
+    // 創建測試進程 B
+    Scheduler::spawn(|yielder, _input| {
+        for i in 0..5 {
+            crate::kprintln!("Process B: iteration {}", i);
+            yielder.suspend(());
+        }
+        crate::kprintln!("Process B finished");
+    }, 1);
+
+    // // 創建 Shell 進程（低優先級，在測試進程完成後運行）會 panic
+    // Scheduler::spawn(|yielder, _input| {
+    //     crate::shell::init();
+    //
+    //     loop {
+    //         // 定期 yield 讓其他進程運行
+    //         for _ in 0..1000 {
+    //             Scheduler::check_reschedule();
+    //             crate::hal::cpu::cpu_pause(0);
+    //         }
+    //         yielder.suspend(());
+    //     }
+    // }, 10); // 低優先級
+
+    // 運行調度器（永遠不返回）
+    Scheduler::run()
 }
 
 pub fn test_apic_timer() {

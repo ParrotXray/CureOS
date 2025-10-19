@@ -254,6 +254,8 @@ pub fn apic_calibration_handler() {
 #[inline]
 pub fn timer_tick_handler() {
     TICK_COUNTER.fetch_add(1, Ordering::Relaxed);
+
+    crate::process::scheduler::Scheduler::on_timer_tick();
 }
 
 /// Get timer information

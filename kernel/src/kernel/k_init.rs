@@ -277,7 +277,36 @@ pub fn _kernel_init(boot_info: &'static mut BootInfo) -> ! {
         );
         let acpi_info = _acpi_init(rsdp_addr, physical_memory_offset);
 
-        _post_init(acpi_info.as_ref(), &mut mapper, &mut frame_allocator);
+        unsafe {
+            // 將 mapper 和 frame_allocator 轉換為 'static 引用
+            let mapper_static: &'static mut OffsetPageTable =
+                core::mem::transmute(&mut mapper);
+            let allocator_static: &'static mut frame::BootInfoFrameAllocator =
+                core::mem::transmute(&mut frame_allocator);
+
+            // 初始化全局變量
+            crate::mm::init_globals(mapper_static, allocator_static);
+
+            log_info!("Global mapper and frame allocator initialized");
+        }
+
+        // 不要 drop，因為我們把引用給了全局變量
+        core::mem::forget(mapper);
+        core::mem::forget(frame_allocator);
+        // ============================================
+
+        let acpi_info = _acpi_init(rsdp_addr, physical_memory_offset);
+
+        // 現在可以安全地訪問全局 mapper 和 allocator
+        if let Some(mapper_once) = crate::mm::KERNEL_MAPPER.get() {
+            if let Some(allocator_once) = crate::mm::FRAME_ALLOCATOR.get() {
+                let mut mapper_guard = mapper_once.lock();
+                let mut allocator_guard = allocator_once.lock();
+
+                _post_init(acpi_info.as_ref(), *mapper_guard, *allocator_guard);
+            }
+        }
+
 
         _boot_report(&boot_info.memory_regions, physical_memory_offset);
 
