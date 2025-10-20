@@ -3,7 +3,7 @@ use bootloader_api::BootInfo;
 use bootloader_api::info::MemoryRegionKind;
 use x86_64::structures::paging::OffsetPageTable;
 use x86_64::{PhysAddr, VirtAddr};
-use crate::mm::{allocator::{frame, heap, pmm}, paging, vma, vmm};
+use crate::mm::{allocator::{frame, heap, pmm}, init_globals, paging, vma, vmm};
 use crate::arch::amd64::{gdt, idt};
 use crate::tty::tty;
 use crate::kprintln;
@@ -15,6 +15,7 @@ use crate::drivers::keyboard;
 use crate::hal::{acpi, cpu, rtc, timer};
 use crate::hal::apic::{ioapic, lapic};
 use crate::hal::cpu::cpu_enable_interrupts;
+use crate::process::scheduler::Scheduler;
 use crate::task::executor;
 
 fn _logger_init() {
@@ -55,7 +56,7 @@ fn _memory_init(
         let mut total_usable = 0u64;
 
         for region in memory_regions.iter() {
-            if region.kind == bootloader_api::info::MemoryRegionKind::Usable {
+            if region.kind == MemoryRegionKind::Usable {
                 usable_start = usable_start.min(region.start);
                 usable_end = usable_end.max(region.end);
                 total_usable += region.end - region.start;
@@ -275,29 +276,23 @@ pub fn _kernel_init(boot_info: &'static mut BootInfo) -> ! {
             &boot_info.memory_regions,
             physical_memory_offset
         );
-        let acpi_info = _acpi_init(rsdp_addr, physical_memory_offset);
 
         unsafe {
-            // 將 mapper 和 frame_allocator 轉換為 'static 引用
             let mapper_static: &'static mut OffsetPageTable =
                 core::mem::transmute(&mut mapper);
             let allocator_static: &'static mut frame::BootInfoFrameAllocator =
                 core::mem::transmute(&mut frame_allocator);
 
-            // 初始化全局變量
-            crate::mm::init_globals(mapper_static, allocator_static);
+            init_globals(mapper_static, allocator_static);
 
             log_info!("Global mapper and frame allocator initialized");
         }
 
-        // 不要 drop，因為我們把引用給了全局變量
         core::mem::forget(mapper);
         core::mem::forget(frame_allocator);
-        // ============================================
 
         let acpi_info = _acpi_init(rsdp_addr, physical_memory_offset);
 
-        // 現在可以安全地訪問全局 mapper 和 allocator
         if let Some(mapper_once) = crate::mm::KERNEL_MAPPER.get() {
             if let Some(allocator_once) = crate::mm::FRAME_ALLOCATOR.get() {
                 let mut mapper_guard = mapper_once.lock();
@@ -307,7 +302,6 @@ pub fn _kernel_init(boot_info: &'static mut BootInfo) -> ! {
             }
         }
 
-
         _boot_report(&boot_info.memory_regions, physical_memory_offset);
 
         kprintln!();
@@ -316,6 +310,7 @@ pub fn _kernel_init(boot_info: &'static mut BootInfo) -> ! {
 
         let mut executor = executor::Executor::new();
 
+        Scheduler::init();
         k_main::_kernel_main();
 
     } else {

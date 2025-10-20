@@ -1,7 +1,7 @@
 // kernel/src/process/scheduler.rs
 use super::process::{Process, ProcessId, ProcessState};
 use core::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
-use crate::{log_debug, log_info, log_warn};
+use crate::{hal, log_debug, log_info, log_warn};
 
 const MAX_PROCESSES: usize = 256;
 const DEFAULT_TIME_SLICE: u64 = 10;
@@ -21,18 +21,17 @@ pub struct Scheduler;
 
 impl Scheduler {
     pub fn init() {
-        log_info!("Initializing preemptive scheduler");
+        log_info!("Initializing scheduler with blocking support");
         SCHEDULER_ENABLED.store(true, Ordering::Release);
     }
 
-    /// 創建新進程
+    /// Create a new process
     pub fn spawn<F>(f: F, priority: u8) -> Option<ProcessId>
     where
         F: FnOnce(&corosensei::Yielder<(), ()>, ()) + 'static,
     {
         let pid = NEXT_PID.fetch_add(1, Ordering::Relaxed);
 
-        // 創建進程（可能失敗）
         let process = match Process::new(pid, priority, DEFAULT_TIME_SLICE).spawn(f) {
             Some(p) => p,
             None => {
@@ -46,7 +45,7 @@ impl Scheduler {
                 if PROCESSES[i].is_none() {
                     PROCESSES[i] = Some(process);
                     PROCESS_COUNT.fetch_add(1, Ordering::Release);
-                    log_debug!("Spawned process {} at slot {}", pid, i);
+                    // log_debug!("Spawned process {} at slot {}", pid, i);
                     return Some(pid);
                 }
             }
@@ -56,7 +55,36 @@ impl Scheduler {
         None
     }
 
-    /// Timer 中斷處理器調用
+    /// Block the current process
+    pub fn block_current() {
+        let current_idx = CURRENT_PROCESS.load(Ordering::Acquire);
+
+        unsafe {
+            if let Some(ref mut process) = PROCESSES[current_idx] {
+                process.state = ProcessState::Blocked;
+                // log_debug!("Process {} (slot {}) blocked", process.id, current_idx);
+            }
+        }
+    }
+
+    /// Wake up the specified process
+    pub fn wake_process(pid: u64) {
+        unsafe {
+            for i in 0..MAX_PROCESSES {
+                if let Some(ref mut process) = PROCESSES[i] {
+                    if process.id == pid && process.state == ProcessState::Blocked {
+                        process.state = ProcessState::Ready;
+                        // log_debug!("Process {} (slot {}) woken up", process.id, i);
+                        NEED_RESCHEDULE.store(true, Ordering::Release);
+                        return;
+                    }
+                }
+            }
+        }
+        log_warn!("Tried to wake non-existent or non-blocked process {}", pid);
+    }
+
+    /// Timer interrupt call
     pub fn on_timer_tick() {
         if !SCHEDULER_ENABLED.load(Ordering::Acquire) {
             return;
@@ -79,26 +107,24 @@ impl Scheduler {
         }
     }
 
-    /// 在安全點檢查是否需要調度
+    /// Check if rescheduling is needed
     pub fn check_reschedule() {
         if NEED_RESCHEDULE.swap(false, Ordering::AcqRel) {
             Self::schedule();
         }
     }
 
-    /// 執行調度
+    /// Execute scheduling
     fn schedule() {
         let count = PROCESS_COUNT.load(Ordering::Acquire);
         if count == 0 {
             return;
         }
 
-        let mut current_idx = CURRENT_PROCESS.load(Ordering::Acquire);
-        let start_idx = current_idx;
-        let mut found = false;
-
         unsafe {
-            // 將當前進程設為 Ready（如果還在運行）
+            let current_idx = CURRENT_PROCESS.load(Ordering::Acquire);
+
+            // Set the current process to Ready (if it is running)
             if let Some(ref mut process) = PROCESSES[current_idx] {
                 if process.state == ProcessState::Running {
                     process.state = ProcessState::Ready;
@@ -106,63 +132,62 @@ impl Scheduler {
                 }
             }
 
-            // Round-robin 查找下一個可運行的進程
+            // Round-robin to find the next Ready process
+            let mut next_idx = current_idx;
+            let mut attempts = 0;
+
             loop {
-                current_idx = (current_idx + 1) % MAX_PROCESSES;
+                next_idx = (next_idx + 1) % MAX_PROCESSES;
+                attempts += 1;
 
-                if let Some(ref mut process) = PROCESSES[current_idx] {
+                if attempts > MAX_PROCESSES {
+                    // There is no Ready process, all processes are blocked
+                    // log_debug!("All processes blocked or terminated");
+                    return;
+                }
+
+                if let Some(ref mut process) = PROCESSES[next_idx] {
                     if process.state == ProcessState::Ready {
-                        CURRENT_PROCESS.store(current_idx, Ordering::Release);
-                        log_debug!("Switching to process {} (slot {})", process.id, current_idx);
+                        CURRENT_PROCESS.store(next_idx, Ordering::Release);
 
-                        // Resume 進程
-                        log_debug!("About to resume process {}", process.id);
+                        // log_debug!("Switching to process {} (slot {})", process.id, next_idx);
+
                         let result = process.resume();
-                        log_debug!("Process {} resume returned: {}", process.id, result);
 
                         if !result {
-                            log_debug!("Process {} terminated", process.id);
-                            PROCESSES[current_idx] = None;
+                            // log_debug!("Process {} terminated", process.id);
+                            PROCESSES[next_idx] = None;
                             PROCESS_COUNT.fetch_sub(1, Ordering::Release);
                             continue;
                         }
 
-                        found = true;
-                        break;
+                        return;
                     }
                 }
-
-                // 遍歷一圈
-                if current_idx == start_idx {
-                    break;
-                }
-            }
-
-            if !found {
-                log_debug!("No runnable process found");
             }
         }
     }
 
-    /// 主調度循環
+    /// Main scheduling loop
     pub fn run() -> ! {
-        log_info!("Starting scheduler main loop");
-
         loop {
             Self::schedule();
 
-            if PROCESS_COUNT.load(Ordering::Acquire) == 0 {
-                crate::hal::cpu::cpu_halt();
+            let count = PROCESS_COUNT.load(Ordering::Acquire);
+            if count == 0 {
+                log_info!("No processes remaining, system idle");
+                hal::cpu::cpu_halt();
             }
 
-            crate::hal::cpu::cpu_pause(0);
+            hal::cpu::cpu_pause(500);
         }
     }
 
-    /// 獲取統計信息
-    pub fn stats() -> (usize, usize) {
-        let count = PROCESS_COUNT.load(Ordering::Acquire);
-        let current = CURRENT_PROCESS.load(Ordering::Acquire);
-        (count, current)
+    /// Get the current process ID
+    pub fn current_pid() -> Option<u64> {
+        let current_idx = CURRENT_PROCESS.load(Ordering::Acquire);
+        unsafe {
+            PROCESSES[current_idx].as_ref().map(|p| p.id)
+        }
     }
 }

@@ -31,46 +31,32 @@ pub fn _kernel_main() -> ! {
     if let time = rtc::get_time() {
         kprintln!("Date/Time:  {}", time.format());
     }
-    
-    kprintln!();
-    kprintln!("Type 'help' for available commands");
-    kprintln!();
 
-    Scheduler::init();
-
-    // 創建測試進程 A
-    Scheduler::spawn(|yielder, _input| {
-        for i in 0..5 {
-            crate::kprintln!("Process A: iteration {}", i);
-            yielder.suspend(());
-        }
-        crate::kprintln!("Process A finished");
-    }, 1);
-
-    // 創建測試進程 B
-    Scheduler::spawn(|yielder, _input| {
-        for i in 0..5 {
-            crate::kprintln!("Process B: iteration {}", i);
-            yielder.suspend(());
-        }
-        crate::kprintln!("Process B finished");
-    }, 1);
-
-    // // 創建 Shell 進程（低優先級，在測試進程完成後運行）會 panic
+    // Process A
     // Scheduler::spawn(|yielder, _input| {
-    //     crate::shell::init();
-    //
-    //     loop {
-    //         // 定期 yield 讓其他進程運行
-    //         for _ in 0..1000 {
-    //             Scheduler::check_reschedule();
-    //             crate::hal::cpu::cpu_pause(0);
-    //         }
+    //     for i in 0..5 {
+    //         crate::kprintln!("Process A: iteration {}", i);
     //         yielder.suspend(());
     //     }
-    // }, 10); // 低優先級
+    //     crate::kprintln!("Process A finished");
+    // }, 1);
+    //
+    // Process B
+    // Scheduler::spawn(|yielder, _input| {
+    //     for i in 0..5 {
+    //         crate::kprintln!("Process B: iteration {}", i);
+    //         yielder.suspend(());
+    //     }
+    //     crate::kprintln!("Process B finished");
+    // }, 1);
+    //
+    // Scheduler::init();
 
-    // 運行調度器（永遠不返回）
+    Scheduler::spawn(|yielder, _input| {
+        let pid = Scheduler::current_pid().unwrap();
+        shell::shell_main(pid, yielder);
+    }, 5);
+
     Scheduler::run()
 }
 

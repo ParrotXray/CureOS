@@ -88,8 +88,8 @@ pub fn handle_scancode(raw: u8) {
         }
 
         match scancode {
-            0x1C => print_char(b'\n'),    // Numpad Enter
-            0x35 => print_char(b'/'),     // Numpad /
+            0x1C => tty::device::receive_char(b'\n'),    // Numpad Enter
+            0x35 => tty::device::receive_char(b'/'),     // Numpad /
             0x47 => kprintln!("[Home]"),
             0x48 => kprintln!("[Up]"),
             0x49 => kprintln!("[PgUp]"),
@@ -190,26 +190,21 @@ pub fn handle_scancode(raw: u8) {
 
     if state.ctrl_pressed {
         match ascii {
-            b'c' | b'C' => { kprintln!("^C"); return; }
-            b'd' | b'D' => { kprintln!("^D"); return; }
-            b'l' | b'L' => { tty::tty::clear(0x000000); return; }
-            _ => {}
+            b'c' | b'C' => {
+                crate::tty::device::receive_char(3);  // Ctrl+C
+                return;
+            }
+            b'l' | b'L' => {
+                tty::device::receive_char(12);  // Ctrl+L
+                return;
+            }
+            _ => return,
         }
     }
 
-    print_char(ascii);
+    tty::device::receive_char(ascii);
 }
 
-/// Print a character to the screen
-fn print_char(c: u8) {
-    if c == b'\n' {
-        shell::process_keyboard_char('\n');
-    } else if c == 8 {  // Backspace
-        shell::process_keyboard_char('\x08');
-    } else if c.is_ascii_graphic() || c == b' ' {
-        shell::process_keyboard_char(c as char);
-    }
-}
 
 /// Initialize keyboard driver
 pub fn init() {

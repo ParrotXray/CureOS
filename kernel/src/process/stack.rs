@@ -4,7 +4,7 @@ use corosensei::stack::{Stack, StackPointer, STACK_ALIGNMENT};
 use crate::mm::{KERNEL_MAPPER, FRAME_ALLOCATOR};
 use crate::mm::allocator::pmm;
 use x86_64::{VirtAddr, structures::paging::{Page, PageTableFlags, Size4KiB, Mapper}};
-use crate::{log_debug, log_error};
+use crate::{log_debug, log_error, mm};
 
 const PROCESS_STACK_SIZE: usize = 64 * 1024; // 64 KiB
 
@@ -19,12 +19,12 @@ impl ProcessStack {
     pub fn new() -> Option<Self> {
         let page_count = (PROCESS_STACK_SIZE + 4095) / 4096;
 
-        // 從 VMM 分配虛擬地址
-        let vaddr = crate::mm::vmm::VMM.lock().allocate_pages(page_count)?;
+        // Allocate virtual addresses from the VMM
+        let vaddr = mm::vmm::VMM.lock().allocate_pages(page_count)?;
 
-        log_debug!("Allocating process stack at {:#x}, {} pages", vaddr.as_u64(), page_count);
+        // log_debug!("Allocating process stack at {:#x}, {} pages", vaddr.as_u64(), page_count);
 
-        // 映射所有頁面
+        // Map all pages
         let mapper = KERNEL_MAPPER.get()?;
         let allocator = FRAME_ALLOCATOR.get()?;
 
@@ -32,18 +32,18 @@ impl ProcessStack {
             let page_vaddr = vaddr + (i * 4096) as u64;
             let page = Page::<Size4KiB>::containing_address(page_vaddr);
 
-            // 分配物理頁面
+            // Allocate physical pages
             let frame = match pmm::allocate_frame() {
                 Some(f) => f,
                 None => {
                     log_error!("Failed to allocate physical frame for stack page {}", i);
                     Self::cleanup_mapped_pages(vaddr, i);
-                    crate::mm::vmm::VMM.lock().deallocate_pages(vaddr, page_count);
+                    mm::vmm::VMM.lock().deallocate_pages(vaddr, page_count);
                     return None;
                 }
             };
 
-            // 映射頁面
+            // Mapping page
             let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
 
             let mut mapper_guard = mapper.lock();
@@ -60,17 +60,17 @@ impl ProcessStack {
                         drop(mapper_guard);
                         drop(alloc_guard);
                         Self::cleanup_mapped_pages(vaddr, i);
-                        crate::mm::vmm::VMM.lock().deallocate_pages(vaddr, page_count);
+                        mm::vmm::VMM.lock().deallocate_pages(vaddr, page_count);
                         return None;
                     }
                 }
             }
 
-            log_debug!("Mapped stack page {} at {:#x} -> frame {:#x}",
-                      i, page_vaddr.as_u64(), frame.start_address().as_u64());
+            // log_debug!("Mapped stack page {} at {:#x} -> frame {:#x}",
+            //           i, page_vaddr.as_u64(), frame.start_address().as_u64());
         }
 
-        // 計算對齊的 stack base 和 limit
+        // Calculate the aligned stack base and limit
         let base_addr = vaddr.as_u64() + PROCESS_STACK_SIZE as u64;
         let limit_addr = vaddr.as_u64();
 
@@ -85,7 +85,7 @@ impl ProcessStack {
         })
     }
 
-    /// 清理已映射的頁面
+    /// Clean up mapped pages
     fn cleanup_mapped_pages(vaddr: VirtAddr, count: usize) {
         if let Some(mapper) = KERNEL_MAPPER.get() {
             let mut mapper_guard = mapper.lock();
@@ -94,7 +94,7 @@ impl ProcessStack {
                 let page_vaddr = vaddr + (i * 4096) as u64;
                 let page = Page::<Size4KiB>::containing_address(page_vaddr);
 
-                // 明確指定類型
+                // Explicitly specify the type
                 if let Ok((frame, flush)) = mapper_guard.unmap(page) {
                     flush.flush();
                     pmm::deallocate_frame(frame);
@@ -106,9 +106,9 @@ impl ProcessStack {
 
 impl Drop for ProcessStack {
     fn drop(&mut self) {
-        log_debug!("Dropping process stack at {:#x}", self.vaddr.as_u64());
+        // log_debug!("Dropping process stack at {:#x}", self.vaddr.as_u64());
 
-        // 取消映射並釋放物理頁面
+        // Unmap and release physical pages
         if let Some(mapper) = KERNEL_MAPPER.get() {
             let mut mapper_guard = mapper.lock();
 
@@ -116,17 +116,17 @@ impl Drop for ProcessStack {
                 let page_vaddr = self.vaddr + (i * 4096) as u64;
                 let page = Page::<Size4KiB>::containing_address(page_vaddr);
 
-                // 明確指定類型參數
+                // Explicitly specify type parameters
                 if let Ok((frame, flush)) = mapper_guard.unmap(page) {
                     flush.flush();
                     pmm::deallocate_frame(frame);
-                    log_debug!("Unmapped and freed stack page {}", i);
+                    // log_debug!("Unmapped and freed stack page {}", i);
                 }
             }
         }
 
-        // 釋放虛擬地址
-        crate::mm::vmm::VMM.lock().deallocate_pages(self.vaddr, self.page_count);
+        // Release the virtual address
+        mm::vmm::VMM.lock().deallocate_pages(self.vaddr, self.page_count);
     }
 }
 

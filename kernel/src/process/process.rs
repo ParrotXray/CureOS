@@ -15,7 +15,6 @@ pub enum ProcessState {
 pub struct Process {
     pub id: ProcessId,
     pub state: ProcessState,
-    // Coroutine<Input, Yield, Return, Stack>
     pub coroutine: Option<Coroutine<(), (), (), ProcessStack>>,
     pub time_slice: u64,
     pub priority: u8,
@@ -36,13 +35,9 @@ impl Process {
     where
         F: FnOnce(&Yielder<(), ()>, ()) + 'static,
     {
-        // 創建 stack
         let stack = ProcessStack::new()?;
-
-        // 創建 coroutine
         let coro = Coroutine::with_stack(stack, f);
         self.coroutine = Some(coro);
-
         Some(self)
     }
 
@@ -52,12 +47,15 @@ impl Process {
 
             match coro.resume(()) {
                 CoroutineResult::Yield(()) => {
-                    self.state = ProcessState::Ready;
-                    true // 還需要繼續運行
+                    // Set to Ready only when not in Blocked state
+                    if self.state == ProcessState::Running {
+                        self.state = ProcessState::Ready;
+                    }
+                    true
                 }
                 CoroutineResult::Return(()) => {
                     self.state = ProcessState::Terminated;
-                    false // 已完成
+                    false
                 }
             }
         } else {
