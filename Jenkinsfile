@@ -29,7 +29,6 @@ node('ccis') {
                 echo ""
                 echo "=== Building with Make ==="
                 make all
-                
             '''
         }
     }
