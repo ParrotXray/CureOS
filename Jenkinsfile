@@ -46,5 +46,26 @@ node('ccis') {
            docker rmi ${env.IMAGE_ID} || true
          """
        }
+        stage('Notify to Discord') {
+                withCredentials([string(credentialsId: 'f874845f-4cee-48a6-a581-33db517be86a', variable: 'https://discord.com/api/webhooks/1438181389534236793/pdbdWbJL1MAAw_YCtXjZ8YqjJ38VQkf_HA5QzQruKEF94aFaTGDcRciZVsauIgHJJJdw')]) {
+                    script {
+                        def status = currentBuild.currentResult
+                        def desc = """
+                        **Job:** ${env.JOB_NAME}
+                        **Build #:** ${env.BUILD_NUMBER}
+                        **Status:** ${status}
+                        **URL:** ${env.BUILD_URL}
+                        """.stripIndent()
+
+                        discordSend(
+                            webhookURL: DISCORD_WEBHOOK_URL,
+                            title: "Jenkins Build - ${status}",
+                            description: desc,
+                            result: status
+                        )
+                    }
+                }
+            }
+        }
     }
 }
