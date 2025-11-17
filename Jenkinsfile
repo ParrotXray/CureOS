@@ -47,7 +47,7 @@ node('ccis') {
            """
        }
        stage('Notify to Discord') {
-           withCredentials([string(credentialsId: '725eb3cc-b38a-412a-b83c-cd5a5017f8b8', variable: 'https://discord.com/api/webhooks/1438181389534236793/pdbdWbJL1MAAw_YCtXjZ8YqjJ38VQkf_HA5QzQruKEF94aFaTGDcRciZVsauIgHJJJdw')]) {
+           withCredentials([string(credentialsId: '725eb3cc-b38a-412a-b83c-cd5a5017f8b8', variable: 'DISCORD_WEBHOOK_URL')]) {
               script {
                     def status = currentBuild.currentResult
                     def desc = """
