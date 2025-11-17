@@ -1,5 +1,6 @@
 // kernel/src/tty/device
 use alloc::{collections::VecDeque, vec::Vec};
+use x86_64::instructions::interrupts;
 use spin::Mutex;
 use crate::{kprint, process};
 
@@ -111,20 +112,20 @@ impl Device {
     }
 }
 
-// 全局 TTY 設備
 static TTY0: Mutex<Device> = Mutex::new(Device::new());
 
-/// 接收字符（給鍵盤驅動調用）
 pub fn receive_char(c: u8) {
     TTY0.lock().receive_char(c);
 }
 
-/// 讀取一行（給進程調用）
 pub fn read_line(pid: u64) -> Option<Vec<u8>> {
-    TTY0.lock().read_line(pid)
+    interrupts::without_interrupts(|| {
+        TTY0.lock().read_line(pid)
+    })
 }
 
-/// 檢查是否有數據
 pub fn has_input() -> bool {
-    TTY0.lock().has_line()
+    interrupts::without_interrupts(|| {
+        TTY0.lock().has_line()
+    })
 }

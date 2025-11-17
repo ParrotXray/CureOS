@@ -1,4 +1,5 @@
 use bootloader_api::info::{FrameBuffer, FrameBufferInfo, PixelFormat};
+use x86_64::instructions::interrupts;
 use crate::tty::font::FONT_BASIC;
 use spin::Mutex;
 
@@ -214,23 +215,33 @@ pub fn init(framebuffer: &'static mut FrameBuffer) {
     let info = framebuffer.info();
     let buffer = framebuffer.buffer_mut();
 
-    TTY.lock().init(buffer.as_mut_ptr(), buffer.len(), info);
+    interrupts::without_interrupts(|| {
+        TTY.lock().init(buffer.as_mut_ptr(), buffer.len(), info);
+    });
 }
 
 pub fn clear(color: u32) {
-    TTY.lock().clear(color);
+    interrupts::without_interrupts(|| {
+        TTY.lock().clear(color);
+    });
 }
 
 pub fn draw_pixel(x: usize, y: usize, color: u32) {
-    TTY.lock().draw_pixel(x, y, color);
+    interrupts::without_interrupts(|| {
+        TTY.lock().draw_pixel(x, y, color);
+    });
 }
 
 pub fn draw_char(c: char, color: u32) {
-    TTY.lock().draw_char(c, color);
+    interrupts::without_interrupts(|| {
+        TTY.lock().draw_char(c, color);
+    });
 }
 
 pub fn write_str(s: &str, color: u32) {
-    TTY.lock().write_str(s, color);
+    interrupts::without_interrupts(|| {
+        TTY.lock().write_str(s, color);
+    });
 }
 
 pub fn tty_put_str(s: &str, color: Option<u32>) {
@@ -239,11 +250,15 @@ pub fn tty_put_str(s: &str, color: Option<u32>) {
 }
 
 pub fn get_cursor_pos() -> (usize, usize) {
-    TTY.lock().get_cursor_pos()
+    interrupts::without_interrupts(|| {
+        TTY.lock().get_cursor_pos()
+    })
 }
 
 pub fn set_cursor_pos(x: usize, y: usize) {
-    TTY.lock().set_cursor_pos(x, y);
+    interrupts::without_interrupts(|| {
+        TTY.lock().set_cursor_pos(x, y);
+    });
 }
 
 fn write_pixel(info: &FrameBufferInfo, pixel: &mut [u8], r: u8, g: u8, b: u8) {

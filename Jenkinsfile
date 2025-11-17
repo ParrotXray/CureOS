@@ -11,30 +11,40 @@ properties([
 
 
 node('ccis') {
-    stage('Setup Environment') {
-        cleanWs()
-        checkout scm
-        def image = docker.build('cureos-builder', '.')
-        env.IMAGE_ID = image.id
-    }
-    
-    stage('Build with Make') {
-        docker.image(env.IMAGE_ID).inside("--user jenkins") {
-            sh '''
-                echo "=== Environment Check ==="
-                rustc --version
-                cargo --version
-                make --version
-                
-                echo ""
-                echo "=== Building with Make ==="
-                make all
-            '''
+    try{
+        stage('Setup Environment') {
+            cleanWs()
+            checkout scm
+            def image = docker.build('cureos-builder', '.')
+            env.IMAGE_ID = image.id
         }
-    }
-    
-    stage('Archive') {
-        archiveArtifacts artifacts: 'build/**/*.img, bin/**/*',
-                        fingerprint: true
+
+        stage('Build with Make') {
+            docker.image(env.IMAGE_ID).inside("--user jenkins") {
+                sh '''
+                    echo "=== Environment Check ==="
+                    rustc --version
+                    cargo --version
+                    make --version
+
+                    echo ""
+                    echo "=== Building with Make ==="
+                    make all
+                '''
+            }
+        }
+
+        stage('Archive') {
+            archiveArtifacts artifacts: 'build/**/*.img, bin/**/*',
+                            fingerprint: true
+        }
+
+    } finally  {
+       stage('Cleanup') {
+         sh """
+           docker ps -a --filter "label=jenkins-build=${JOB_NAME}" -q | xargs -r docker rm -f || true
+           docker rmi ${env.IMAGE_ID} || true
+         """
+       }
     }
 }
