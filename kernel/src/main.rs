@@ -4,6 +4,18 @@
 #![feature(abi_x86_interrupt)]
 #![feature(alloc_error_handler)]
 extern crate alloc;
+pub mod hal;
+pub mod klibc;
+pub mod arch;
+pub mod mm;
+pub mod tty;
+pub mod kernel;
+pub mod drivers;
+pub mod shell;
+pub mod task;
+pub mod process;
+
+use hal::cpu;
 use alloc::vec::Vec;
 
 use core::panic::PanicInfo;
@@ -15,18 +27,6 @@ use x86_64::{
     VirtAddr,
 };
 
-pub mod hal;
-pub mod klibc;
-pub mod arch;
-pub mod mm;
-pub mod tty;
-pub mod kernel;
-pub mod drivers;
-pub mod shell;
-pub mod task;
-mod process;
-
-use hal::cpu;
 const CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();
     config.mappings.physical_memory = Some(config::Mapping::Dynamic);
