@@ -17,6 +17,7 @@ use crate::hal::apic::{ioapic, lapic};
 use crate::hal::cpu::cpu_enable_interrupts;
 use crate::process::scheduler::Scheduler;
 use crate::task::executor;
+use crate::arch::amd64::syscall;
 
 fn _logger_init() {
     init(
@@ -253,6 +254,7 @@ fn _post_init(
     } else {
         log_error!("APIC not available, cannot enable keyboard");
     }
+    syscall::init();
 
     log_debug!("Cleanup completed");
 }
